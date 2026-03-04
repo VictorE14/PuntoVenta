@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ferretería Alex - Punto de Venta</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+    <div class="header">
+        <div class="header-logo">
+            <div class="logo-icon"><i class="fas fa-hammer"></i></div>
+            <div class="logo-text">
+                <span class="store-name">Ferretería Alex</span>
+                <span class="store-subtitle">Punto de Venta</span>
+            </div>
+        </div>
+        <div class="header-datetime">
+            <div class="datetime-item">
+                <i class="fas fa-calendar-alt"></i>
+                <input type="text" id="date" readonly>
+            </div>
+            <div class="datetime-item">
+                <i class="fas fa-clock"></i>
+                <input type="text" id="time" readonly>
+            </div>
+        </div>
+    </div>
+
+    <div class="search-section">
+        <div class="search-wrapper">
+            <i class="fas fa-search search-icon"></i>
+            <input type="text" id="searchInput" placeholder="Buscar por código, nombre o marca..." autocomplete="off">
+            <div id="searchSuggestions" class="suggestions-dropdown"></div>
+        </div>
+        <button class="btn btn-primary" onclick="openInventoryModal()">
+            <i class="fas fa-boxes"></i> Inventario
+        </button>
+    </div>
+
+    <div class="table-container">
+        <table id="salesTable">
+            <thead>
+                <tr>
+                    <th>No.</th>
+                    <th>Marca</th>
+                    <th>Artículo</th>
+                    <th>Código</th>
+                    <th>Cantidad</th>
+                    <th>Precio Unit.</th>
+                    <th>Subtotal</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="salesBody"></tbody>
+        </table>
+        <div class="empty-state" id="emptyState">
+            <i class="fas fa-shopping-cart"></i>
+            <p>No hay productos en la venta</p>
+            <small>Busca o selecciona productos del inventario</small>
+        </div>
+    </div>
+
+    <div class="footer">
+        <div class="footer-buttons">
+            <button class="btn btn-secondary" onclick="clearAll()">
+                <i class="fas fa-broom"></i> Limpiar
+            </button>
+            <button class="btn btn-warning" onclick="showReturnModal()">
+                <i class="fas fa-undo"></i> Devolución
+            </button>
+            <button class="btn btn-success" onclick="pay()">
+                <i class="fas fa-cash-register"></i> Pagar
+            </button>
+        </div>
+        <div class="total-box">
+            <span class="total-label">TOTAL</span>
+            <span class="total-amount" id="total">$0.00</span>
+        </div>
+    </div>
+
+    <!-- Modal Método de Pago -->
+    <div id="paymentModal" class="modal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2><i class="fas fa-cash-register"></i> Método de Pago</h2>
+                <span class="close" onclick="closePaymentModal()"><i class="fas fa-times"></i></span>
+            </div>
+            <div class="payment-body">
+                <div class="payment-total-display">
+                    <span class="payment-total-label">Total a cobrar</span>
+                    <span class="payment-total-value" id="paymentTotalDisplay">$0.00</span>
+                </div>
+                <div class="payment-methods">
+                    <button class="payment-method-btn" id="btnEfectivo" onclick="selectPaymentMethod('efectivo')">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <span>Efectivo</span>
+                    </button>
+                    <button class="payment-method-btn" id="btnTarjeta" onclick="selectPaymentMethod('tarjeta')">
+                        <i class="fas fa-credit-card"></i>
+                        <span>Tarjeta</span>
+                    </button>
+                </div>
+                <div id="cashSection" class="cash-section" style="display:none;">
+                    <label class="cash-label">Monto recibido</label>
+                    <div class="cash-input-wrapper">
+                        <span class="cash-prefix">$</span>
+                        <input type="number" id="cashReceived" placeholder="0.00" min="0" step="0.01" oninput="calculateChange()">
+                    </div>
+                    <div class="change-display" id="changeDisplay" style="display:none;">
+                        <span class="change-label">Cambio a devolver</span>
+                        <span class="change-value" id="changeValue">$0.00</span>
+                    </div>
+                    <div class="change-error" id="changeError" style="display:none;">
+                        <i class="fas fa-exclamation-triangle"></i> Monto insuficiente
+                    </div>
+                </div>
+                <div id="cardSection" class="card-section" style="display:none;">
+                    <div class="card-info">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Pago con tarjeta. Confirma cuando el terminal lo apruebe.</span>
+                    </div>
+                </div>
+                <button class="btn btn-success confirm-pay-btn" id="confirmPayBtn" onclick="confirmPayment()" disabled>
+                    <i class="fas fa-check"></i> Confirmar Pago
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Inventario -->
+    <div id="inventoryModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 id="inventoryModalTitle"><i class="fas fa-boxes"></i> Catálogo de Productos</h2>
+                <span class="close" onclick="closeInventoryModal()"><i class="fas fa-times"></i></span>
+            </div>
+
+            <!-- Vista: Categorías -->
+            <div id="categoryView">
+                <div class="category-grid" id="categoryGrid"></div>
+            </div>
+
+            <!-- Vista: Productos de categoría -->
+            <div id="productView" style="display:none;">
+                <div class="product-view-header">
+                    <button class="btn btn-secondary btn-back" onclick="showCategoryView()">
+                        <i class="fas fa-arrow-left"></i> Categorías
+                    </button>
+                    <span class="product-view-title" id="currentCategoryLabel"></span>
+                </div>
+                <div class="modal-search">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="inventorySearch" placeholder="Filtrar productos..." oninput="filterInventory()">
+                </div>
+                <div class="inventory-grid" id="inventoryGrid"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Devolución -->
+    <div id="returnModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-undo"></i> Devolución de Producto</h2>
+                <span class="close" onclick="closeReturnModal()"><i class="fas fa-times"></i></span>
+            </div>
+            <div class="return-search-section">
+                <i class="fas fa-search"></i>
+                <input type="text" id="returnSearchInput" placeholder="Buscar en devoluciones..." oninput="searchReturns()">
+            </div>
+            <div class="return-table-container">
+                <table id="returnTable">
+                    <thead>
+                        <tr>
+                            <th>Marca</th>
+                            <th>Artículo</th>
+                            <th>Código</th>
+                            <th>Disponible</th>
+                            <th>A Devolver</th>
+                            <th>Precio Unit.</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody id="returnBody"></tbody>
+                </table>
+            </div>
+            <button class="btn btn-danger confirm-return" onclick="processReturn()">
+                <i class="fas fa-check"></i> Confirmar Devolución
+            </button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

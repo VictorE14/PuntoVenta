@@ -1,0 +1,187 @@
+
+
+-- ============================================================
+-- CATEGORÍAS
+-- ============================================================
+CREATE TABLE categorias (
+    id      SERIAL PRIMARY KEY,
+    nombre  VARCHAR(100) NOT NULL,
+    icono   VARCHAR(50),
+    color   VARCHAR(20)
+);
+
+INSERT INTO categorias (nombre, icono, color) VALUES
+    ('Herramientas Manuales',    'fa-wrench',             '#1565c0'),
+    ('Herramientas Eléctricas',  'fa-bolt',               '#e65100'),
+    ('Jardinería y Agricultura', 'fa-seedling',           '#2e7d32'),
+    ('Equipo de Seguridad',      'fa-hard-hat',           '#b71c1c'),
+    ('Plomería',                 'fa-faucet',             '#00695c'),
+    ('Construcción',             'fa-building',           '#4e342e'),
+    ('Ferretería',               'fa-screwdriver-wrench', '#37474f'),
+    ('Otras Categorías',         'fa-ellipsis-h',         '#6a1b9a');
+
+-- ============================================================
+-- PRODUCTOS
+-- ============================================================
+CREATE TABLE productos (
+    id                  SERIAL PRIMARY KEY,
+    codigo              VARCHAR(20)     NOT NULL UNIQUE,
+    nombre              VARCHAR(150)    NOT NULL,
+    marca               VARCHAR(100),
+    categoria_id        INT             REFERENCES categorias(id),
+    precio              NUMERIC(10,2)   NOT NULL DEFAULT 0,
+    stock               INT             NOT NULL DEFAULT 0,
+    stock_minimo        INT             NOT NULL DEFAULT 1,
+    activo              BOOLEAN         NOT NULL DEFAULT TRUE,
+    fecha_creacion      TIMESTAMPTZ     NOT NULL DEFAULT NOW(),
+    fecha_actualizacion TIMESTAMPTZ     NOT NULL DEFAULT NOW()
+);
+
+-- ============================================================
+-- VENTAS
+-- ============================================================
+CREATE TABLE ventas (
+    id             SERIAL PRIMARY KEY,
+    fecha          TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
+    total          NUMERIC(10,2) NOT NULL DEFAULT 0,
+    metodo_pago    VARCHAR(20)   NOT NULL CHECK (metodo_pago IN ('efectivo', 'tarjeta')),
+    monto_recibido NUMERIC(10,2),
+    cambio         NUMERIC(10,2) DEFAULT 0,
+    cancelada      BOOLEAN       NOT NULL DEFAULT FALSE
+);
+
+-- ============================================================
+-- DETALLE DE VENTAS
+-- ============================================================
+CREATE TABLE detalle_ventas (
+    id           SERIAL PRIMARY KEY,
+    venta_id     INT           NOT NULL REFERENCES ventas(id) ON DELETE CASCADE,
+    producto_id  INT           NOT NULL REFERENCES productos(id),
+    cantidad     INT           NOT NULL DEFAULT 1,
+    precio_unit  NUMERIC(10,2) NOT NULL,
+    subtotal     NUMERIC(10,2) GENERATED ALWAYS AS (cantidad * precio_unit) STORED
+);
+
+-- ============================================================
+-- DEVOLUCIONES
+-- ============================================================
+CREATE TABLE devoluciones (
+    id                SERIAL PRIMARY KEY,
+    venta_id          INT          NOT NULL REFERENCES ventas(id),
+    detalle_venta_id  INT          NOT NULL REFERENCES detalle_ventas(id),
+    cantidad          INT          NOT NULL DEFAULT 1,
+    motivo            TEXT,
+    fecha             TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+-- ============================================================
+-- ENTRADAS DE INVENTARIO  (cuando llega mercancía)
+-- ============================================================
+CREATE TABLE entradas_inventario (
+    id           SERIAL PRIMARY KEY,
+    producto_id  INT           NOT NULL REFERENCES productos(id),
+    cantidad     INT           NOT NULL,
+    costo_unit   NUMERIC(10,2),
+    proveedor    VARCHAR(150),
+    notas        TEXT,
+    fecha        TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
+
+-- ============================================================
+-- CIERRE DEL DÍA
+-- ============================================================
+CREATE TABLE cierres_dia (
+    id                SERIAL PRIMARY KEY,
+    fecha             DATE          NOT NULL UNIQUE DEFAULT CURRENT_DATE,
+    total_ventas      NUMERIC(10,2) NOT NULL DEFAULT 0,
+    total_efectivo    NUMERIC(10,2) NOT NULL DEFAULT 0,
+    total_tarjeta     NUMERIC(10,2) NOT NULL DEFAULT 0,
+    num_tickets       INT           NOT NULL DEFAULT 0,
+    total_devoluciones NUMERIC(10,2) NOT NULL DEFAULT 0,
+    cerrado_por       VARCHAR(100),
+    fecha_cierre      TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
+
+-- ============================================================
+-- LIMPIEZA AUTOMÁTICA — borra devoluciones de ventas > 7 días
+-- (se ejecuta al consultar; Supabase no tiene cron nativo en plan free,
+--  se llama desde el frontend al iniciar sesión)
+-- ============================================================
+CREATE OR REPLACE FUNCTION limpiar_ventas_antiguas()
+RETURNS void AS $$
+BEGIN
+    DELETE FROM devoluciones
+    WHERE venta_id IN (
+        SELECT id FROM ventas
+        WHERE fecha < NOW() - INTERVAL '7 days'
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================
+-- TRIGGER — actualiza fecha_actualizacion en productos
+-- ============================================================
+CREATE OR REPLACE FUNCTION set_fecha_actualizacion()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.fecha_actualizacion = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_productos_updated
+BEFORE UPDATE ON productos
+FOR EACH ROW EXECUTE FUNCTION set_fecha_actualizacion();
+
+-- ============================================================
+-- TRIGGER — descuenta stock al registrar venta
+-- ============================================================
+CREATE OR REPLACE FUNCTION descontar_stock()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE productos
+    SET stock = stock - NEW.cantidad
+    WHERE id = NEW.producto_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_descontar_stock
+AFTER INSERT ON detalle_ventas
+FOR EACH ROW EXECUTE FUNCTION descontar_stock();
+
+-- ============================================================
+-- TRIGGER — devuelve stock al procesar devolución
+-- ============================================================
+CREATE OR REPLACE FUNCTION devolver_stock()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE productos
+    SET stock = stock + NEW.cantidad
+    WHERE id = (
+        SELECT producto_id FROM detalle_ventas WHERE id = NEW.detalle_venta_id
+    );
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_devolver_stock
+AFTER INSERT ON devoluciones
+FOR EACH ROW EXECUTE FUNCTION devolver_stock();
+
+-- ============================================================
+-- TRIGGER — suma stock al registrar entrada de inventario
+-- ============================================================
+CREATE OR REPLACE FUNCTION sumar_stock_entrada()
+RETURNS TRIGGER AS $$
+BEGIN
+    UPDATE productos
+    SET stock = stock + NEW.cantidad
+    WHERE id = NEW.producto_id;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_entrada_stock
+AFTER INSERT ON entradas_inventario
+FOR EACH ROW EXECUTE FUNCTION sumar_stock_entrada();
