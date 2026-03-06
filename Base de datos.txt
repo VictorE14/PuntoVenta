@@ -185,3 +185,47 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trg_entrada_stock
 AFTER INSERT ON entradas_inventario
 FOR EACH ROW EXECUTE FUNCTION sumar_stock_entrada();
+
+
+
+-- ============================================================
+-- TABLA DE USUARIOS PARA ADMIN
+-- ============================================================
+CREATE TABLE IF NOT EXISTS admin_usuarios (
+    id SERIAL PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL, -- En un sistema real, esto debería estar hasheado
+    nombre VARCHAR(100),
+    activo BOOLEAN DEFAULT true,
+    fecha_creacion TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Insertar un usuario de ejemplo (contraseña: admin123)
+INSERT INTO admin_usuarios (username, password, nombre) 
+VALUES ('admin', 'admin123', 'Administrador')
+ON CONFLICT (username) DO NOTHING;
+
+-- Insertar otro usuario de ejemplo
+INSERT INTO admin_usuarios (username, password, nombre) 
+VALUES ('ferreteria', 'ferre2024', 'Gerente')
+ON CONFLICT (username) DO NOTHING;
+
+-- Verificar usuarios creados
+SELECT * FROM admin_usuarios;
+
+-- ============================================================
+-- POLÍTICAS DE SEGURIDAD PARA LA TABLA
+-- ============================================================
+ALTER TABLE admin_usuarios ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Permitir lectura a todos" ON admin_usuarios;
+DROP POLICY IF EXISTS "Permitir inserción a todos" ON admin_usuarios;
+
+CREATE POLICY "Permitir lectura a todos" 
+ON admin_usuarios FOR SELECT 
+USING (true);
+
+-- Solo permitir inserción desde el panel de Supabase (no desde la app)
+CREATE POLICY "Permitir inserción solo desde servicio" 
+ON admin_usuarios FOR INSERT 
+WITH CHECK (false);

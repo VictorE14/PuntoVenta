@@ -1,0 +1,43 @@
+-- Buscar el ID del usuario que acabas de crear (reemplaza con el email que usaste)
+SELECT id, email FROM auth.users WHERE email = 'tuzdzidzv@gmail.com';
+
+
+Copia el ID que aparece (es un UUID, algo como e88139dd-5031-4b57-afa9-8ab30a8dae45)
+
+
+-- Insertar el nuevo administrador (reemplaza con los valores reales)
+INSERT INTO admin_usuarios (username, password, nombre) 
+VALUES (
+    'Victor14',           -- El nombre de usuario para login
+    'TuzDzidzv',         -- La contraseña (en texto plano por ahora)
+    'Victor Tuz Dzidz'    -- Nombre completo
+);
+
+
+SELECT * FROM admin_usuarios ORDER BY id;
+
+
+
+Metodo 2
+
+-- ============================================================
+-- CREAR NUEVO ADMINISTRADOR (TODO EN UNO)
+-- ============================================================
+-- CAMBIA ESTOS VALORES:
+DO $$
+DECLARE
+    v_email TEXT := 'nuevo_admin@ejemplo.com';      -- Email para login
+    v_password TEXT := 'MiContraseñaSegura123';     -- Contraseña
+    v_username TEXT := 'admin2';                     -- Nombre de usuario
+    v_nombre TEXT := 'Administrador 2';               -- Nombre completo
+    v_user_id UUID;
+BEGIN
+    -- Insertar en admin_usuarios directamente
+    INSERT INTO admin_usuarios (username, password, nombre)
+    VALUES (v_username, v_password, v_nombre);
+    
+    RAISE NOTICE '✅ Usuario creado exitosamente: %', v_username;
+END $$;
+
+-- Verificar el resultado
+SELECT * FROM admin_usuarios ORDER BY id DESC;
