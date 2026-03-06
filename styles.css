@@ -1514,3 +1514,22 @@ tbody tr.highlight {
 .modal-header .close:hover {
     opacity: 1;
 }
+
+/* Estilos para filas de carga/error */
+.loading-row td,
+.error-row td,
+.empty-row td {
+    text-align: center;
+    padding: 30px;
+    color: #757575;
+}
+
+.error-row td {
+    color: #c62828;
+    background: #ffebee;
+}
+
+.return-subtotal {
+    font-weight: 600;
+    color: #00695c;
+}

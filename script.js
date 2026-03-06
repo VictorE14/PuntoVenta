@@ -1133,11 +1133,11 @@ function showAdminMessage(text, type) {
 }
 
 // ============================================================
-// DEVOLUCIONES
+// DEVOLUCIONES - VERSIÓN CON TU TABLA EXISTENTE
 // ============================================================
 
+// Mostrar modal de devolución
 function showReturnModal() {
-    cleanOldReturns();
     updateReturnOptions();
     document.getElementById('returnModal').style.display = 'block';
 }
@@ -1147,154 +1147,249 @@ function closeReturnModal() {
     document.getElementById('returnSearchInput').value = '';
 }
 
-function cleanOldReturns() {
-    const returns = JSON.parse(localStorage.getItem('returns') || '[]');
-    const now = new Date();
-    const filtered = returns.filter(r => (now - new Date(r.date)) / (1000 * 60 * 60 * 24) <= 4);
-    localStorage.setItem('returns', JSON.stringify(filtered));
-}
-
-function updateReturnOptions() {
+// Actualizar opciones de devolución
+async function updateReturnOptions() {
     const tbody = document.getElementById('returnBody');
-    tbody.innerHTML = '';
+    tbody.innerHTML = '<tr><td colspan="7" class="loading-row"><i class="fas fa-spinner fa-spin"></i> Cargando ventas...</td></tr>';
 
-    productosEnVenta.forEach(p => {
-        const tr = document.createElement('tr');
-        tr.setAttribute('data-code', p.codigo);
-        tr.setAttribute('data-source', 'sales');
-        tr.innerHTML = `
-            <td>${p.marca}</td>
-            <td>${p.nombre}</td>
-            <td>${p.codigo}</td>
-            <td>${p.cantidad}</td>
-            <td><input type="number" min="0" max="${p.cantidad}" value="0" onchange="updateReturnPrice(this, ${p.precio})"></td>
-            <td>$${p.precio.toFixed(2)}</td>
-            <td id="rp_${p.codigo}">$0.00</td>
-        `;
-        tbody.appendChild(tr);
-    });
+    try {
+        // ===================================================
+        // 1. PRODUCTOS DE LA VENTA ACTUAL
+        // ===================================================
+        const ventaActualHTML = productosEnVenta.map(p => `
+            <tr data-codigo="${p.codigo}" data-source="actual" data-producto-id="${p.id}" data-venta-id="actual">
+                <td>${p.marca}</td>
+                <td>${p.nombre}</td>
+                <td>${p.codigo}</td>
+                <td>${p.cantidad}</td>
+                <td><input type="number" min="0" max="${p.cantidad}" value="0" onchange="updateReturnSubtotal(this, ${p.precio})"></td>
+                <td>$${p.precio.toFixed(2)}</td>
+                <td class="return-subtotal" id="sub_${p.codigo}">$0.00</td>
+            </tr>
+        `).join('');
 
-    const returns = JSON.parse(localStorage.getItem('returns') || '[]');
-    const now = new Date();
-    const salesCodes = productosEnVenta.map(p => p.codigo);
+        // ===================================================
+        // 2. VENTAS ANTERIORES (últimos 7 días)
+        // ===================================================
+        const { data: ventas, error } = await supabaseClient
+            .from('ventas')
+            .select(`
+                id,
+                fecha,
+                detalle_ventas (
+                    id,
+                    cantidad,
+                    precio_unit,
+                    producto_id,
+                    productos (
+                        codigo,
+                        nombre,
+                        marca
+                    )
+                )
+            `)
+            .gte('fecha', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+            .order('fecha', { ascending: false });
 
-    returns.forEach(r => {
-        const diff = (now - new Date(r.date)) / (1000 * 60 * 60 * 24);
-        if (diff > 4 || r.qty <= 0 || salesCodes.includes(r.code)) return;
+        if (error) throw error;
+
+        // Verificar productos ya devueltos
+        const { data: devolucionesExistentes } = await supabaseClient
+            .from('devoluciones')
+            .select('detalle_venta_id, cantidad');
+
+        const devueltosMap = new Map();
+        devolucionesExistentes?.forEach(d => {
+            devueltosMap.set(d.detalle_venta_id, (devueltosMap.get(d.detalle_venta_id) || 0) + d.cantidad);
+        });
+
+        // Generar HTML de ventas anteriores
+        const ventasAnterioresHTML = ventas?.map(venta => {
+            return venta.detalle_ventas.map(detalle => {
+                const yaDevuelto = devueltosMap.get(detalle.id) || 0;
+                const disponible = detalle.cantidad - yaDevuelto;
+                
+                if (disponible <= 0) return ''; // Ya se devolvió todo
+                
+                return `
+                    <tr data-venta-id="${venta.id}" 
+                        data-detalle-venta-id="${detalle.id}"
+                        data-producto-id="${detalle.producto_id}"
+                        data-codigo="${detalle.productos.codigo}"
+                        data-source="anterior"
+                        data-max="${disponible}">
+                        <td>${detalle.productos.marca || 'N/A'}</td>
+                        <td>${detalle.productos.nombre}</td>
+                        <td>${detalle.productos.codigo}</td>
+                        <td>${disponible}</td>
+                        <td><input type="number" min="0" max="${disponible}" value="0" onchange="updateReturnSubtotal(this, ${detalle.precio_unit})"></td>
+                        <td>$${detalle.precio_unit.toFixed(2)}</td>
+                        <td class="return-subtotal" id="sub_${detalle.productos.codigo}_${detalle.id}">$0.00</td>
+                    </tr>
+                `;
+            }).join('');
+        }).join('') || '';
+
+        tbody.innerHTML = ventaActualHTML + ventasAnterioresHTML;
         
-        const tr = document.createElement('tr');
-        tr.setAttribute('data-code', r.code);
-        tr.setAttribute('data-source', 'returns');
-        tr.innerHTML = `
-            <td>${r.brand || 'N/A'}</td>
-            <td>${r.name || 'N/A'}</td>
-            <td>${r.code}</td>
-            <td>${r.qty}</td>
-            <td><input type="number" min="0" max="${r.qty}" value="0" onchange="updateReturnPrice(this, ${r.pricePerUnit || 0})"></td>
-            <td>$${(r.pricePerUnit || 0).toFixed(2)}</td>
-            <td id="rp_${r.code}">$0.00</td>
-        `;
-        tbody.appendChild(tr);
-    });
+        if (tbody.children.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="7" class="empty-row">No hay productos disponibles para devolver</td></tr>';
+        }
+
+    } catch (error) {
+        console.error('Error cargando ventas:', error);
+        tbody.innerHTML = '<tr><td colspan="7" class="error-row">Error al cargar ventas</td></tr>';
+    }
 }
 
+// Actualizar subtotal
+function updateReturnSubtotal(input, precio) {
+    const row = input.closest('tr');
+    const subtotalCell = row.querySelector('.return-subtotal');
+    const cantidad = parseInt(input.value) || 0;
+    subtotalCell.textContent = `$${(cantidad * precio).toFixed(2)}`;
+}
+
+// Buscar en devoluciones
 function searchReturns() {
     const query = document.getElementById('returnSearchInput').value.toLowerCase();
     document.querySelectorAll('#returnBody tr').forEach(row => {
-        const code = (row.getAttribute('data-code') || '').toLowerCase();
-        const name = row.cells[1]?.textContent.toLowerCase() || '';
-        row.style.display = code.includes(query) || name.includes(query) ? '' : 'none';
+        if (row.classList.contains('loading-row') || row.classList.contains('error-row') || row.classList.contains('empty-row')) return;
+        
+        const codigo = (row.getAttribute('data-codigo') || '').toLowerCase();
+        const nombre = row.cells[1]?.textContent.toLowerCase() || '';
+        const marca = row.cells[0]?.textContent.toLowerCase() || '';
+        
+        row.style.display = (codigo.includes(query) || nombre.includes(query) || marca.includes(query)) ? '' : 'none';
     });
 }
 
-function updateReturnPrice(input, price) {
-    const code = input.closest('tr').getAttribute('data-code');
-    const cell = document.getElementById(`rp_${code}`);
-    if (cell) {
-        cell.textContent = `$${((parseInt(input.value) || 0) * price).toFixed(2)}`;
-    }
-}
-
+// Procesar devolución
 async function processReturn() {
     const rows = document.querySelectorAll('#returnBody tr');
-    const now = new Date().toISOString();
-    const returns = JSON.parse(localStorage.getItem('returns') || '[]');
-    let totalRemoved = 0;
-    let productosADevolver = [];
+    let totalDevuelto = 0;
+    let devoluciones = [];
 
-    for (const row of rows) {
-        const code = row.getAttribute('data-code');
-        const source = row.getAttribute('data-source');
-        const returnQty = parseInt(row.querySelector('input[type="number"]').value) || 0;
+    // Filtrar filas válidas
+    const filasValidas = Array.from(rows).filter(row => 
+        !row.classList.contains('loading-row') && 
+        !row.classList.contains('error-row') &&
+        !row.classList.contains('empty-row') &&
+        row.cells.length > 1
+    );
+
+    for (const row of filasValidas) {
+        const input = row.querySelector('input[type="number"]');
+        if (!input) continue;
         
-        if (returnQty <= 0) continue;
+        const cantidad = parseInt(input.value) || 0;
+        if (cantidad <= 0) continue;
 
-        if (source === 'sales') {
-            const productIndex = productosEnVenta.findIndex(p => p.codigo === code);
-            if (productIndex === -1) continue;
+        const ventaId = row.getAttribute('data-venta-id');
+        const detalleVentaId = row.getAttribute('data-detalle-venta-id');
+        const productoId = row.getAttribute('data-producto-id');
+        const source = row.getAttribute('data-source');
+        const max = parseInt(row.getAttribute('data-max') || row.cells[3]?.textContent || 0);
 
-            const product = productosEnVenta[productIndex];
-            
-            if (returnQty > product.cantidad) {
-                alert(`La cantidad a devolver de "${product.nombre}" supera la disponible.`);
-                return;
+        // Validar cantidad
+        if (cantidad > max) {
+            alert(`Error: No puedes devolver más de ${max} unidades de este producto`);
+            return;
+        }
+
+        if (source === 'actual') {
+            // Devolución de la venta actual
+            const productIndex = productosEnVenta.findIndex(p => p.id == productoId);
+            if (productIndex >= 0) {
+                productosEnVenta[productIndex].cantidad -= cantidad;
+                if (productosEnVenta[productIndex].cantidad === 0) {
+                    productosEnVenta.splice(productIndex, 1);
+                }
             }
-
-            productosADevolver.push({
-                producto_id: product.id,
-                cantidad: returnQty,
-                precio_unit: product.precio
+            
+            // Nota: Para venta actual no hay detalle_venta_id aún (no está guardada)
+            showNotification('Devolución de venta actual procesada', 'info');
+            
+        } else if (source === 'anterior' && detalleVentaId) {
+            // Devolución de venta anterior - guardar en Supabase
+            devoluciones.push({
+                venta_id: ventaId,
+                detalle_venta_id: detalleVentaId,
+                cantidad: cantidad,
+                motivo: 'Devolución de cliente',
+                fecha: new Date().toISOString()
             });
+        }
 
-            product.cantidad -= returnQty;
-            if (product.cantidad === 0) {
-                productosEnVenta.splice(productIndex, 1);
-            }
+        totalDevuelto += cantidad;
+    }
 
-            returns.push({
-                code: product.codigo,
-                qty: returnQty,
-                date: now,
-                brand: product.marca,
-                name: product.nombre,
-                pricePerUnit: product.precio
-            });
+    if (devoluciones.length === 0 && totalDevuelto === 0) {
+        alert('No hay cantidades a devolver');
+        return;
+    }
 
-            totalRemoved += returnQty;
+    // Guardar devoluciones en Supabase
+    if (devoluciones.length > 0) {
+        try {
+            const { error } = await supabaseClient
+                .from('devoluciones')
+                .insert(devoluciones);
 
-        } else if (source === 'returns') {
-            const existing = returns.find(r => r.code === code);
-            if (!existing) continue;
+            if (error) throw error;
             
-            if (returnQty > existing.qty) {
-                alert(`La cantidad a devolver de "${existing.name}" supera la disponible.`);
-                return;
-            }
-            
-            existing.qty -= returnQty;
-            if (existing.qty === 0) {
-                returns.splice(returns.indexOf(existing), 1);
-            }
-            totalRemoved += returnQty;
+        } catch (error) {
+            console.error('Error guardando devolución:', error);
+            alert('Error al procesar la devolución: ' + error.message);
+            return;
         }
     }
 
-    localStorage.setItem('returns', JSON.stringify(returns));
-
-    if (productosADevolver.length > 0) {
-        console.log('Productos a devolver en Supabase:', productosADevolver);
-    }
-
+    // Actualizar tabla de ventas
     renderSalesTable();
-
-    if (totalRemoved > 0) {
-        alert(`✅ Devolución procesada correctamente.\nTotal devuelto: ${totalRemoved} artículo(s).`);
-    } else {
-        alert('No ingresaste cantidades a devolver.');
+    
+    // Mostrar resumen
+    let mensaje = `✅ Devolución procesada correctamente.\n`;
+    mensaje += `Total devuelto: ${totalDevuelto} artículo(s).\n`;
+    if (devoluciones.length > 0) {
+        mensaje += `Devoluciones guardadas en base de datos: ${devoluciones.length}`;
     }
+    alert(mensaje);
     
     closeReturnModal();
 }
+
+// ============================================================
+// FUNCIÓN PARA VER HISTORIAL DE DEVOLUCIONES (opcional)
+// ============================================================
+async function verHistorialDevoluciones() {
+    try {
+        const { data, error } = await supabaseClient
+            .from('devoluciones')
+            .select(`
+                *,
+                ventas (fecha, total),
+                detalle_ventas (
+                    cantidad,
+                    precio_unit,
+                    productos (nombre, codigo, marca)
+                )
+            `)
+            .order('fecha', { ascending: false })
+            .limit(20);
+
+        if (error) throw error;
+
+        console.log('📜 Historial de devoluciones:', data);
+        return data;
+        
+    } catch (error) {
+        console.error('Error:', error);
+        return [];
+    }
+}
+
+
 
 // ============================================================
 // CIERRE DE MODALES
