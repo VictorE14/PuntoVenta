@@ -13,179 +13,16 @@ const supabaseClient = createClient(
 let categoriesFromDB = [];
 let currentCategory = null;
 let productosEnVenta = []; // Array temporal para la venta actual
-// ============================================================
-// VARIABLES DE SESIÓN
-// ============================================================
+
+// Variables para Admin
+let adminCurrentCategory = null;
+let adminEditMode = false;
+let adminEditingProductId = null;
+
+// Variables de sesión
 let isAdminLoggedIn = false;
 let currentAdminUser = null;
-
-// ============================================================
-// FUNCIONES DE LOGIN
-// ============================================================
-
-function showLoginModal() {
-    // Si ya está logueado, abrir directamente el admin
-    if (isAdminLoggedIn) {
-        openAdminModal();
-        return;
-    }
-    
-    // Limpiar campos
-    document.getElementById('loginUsername').value = '';
-    document.getElementById('loginPassword').value = '';
-    document.getElementById('loginError').style.display = 'none';
-    
-    // Mostrar modal
-    document.getElementById('loginModal').style.display = 'block';
-    document.getElementById('loginUsername').focus();
-}
-
-function closeLoginModal() {
-    document.getElementById('loginModal').style.display = 'none';
-}
-
-function handleKeyPress(event) {
-    if (event.key === 'Enter') {
-        attemptLogin();
-    }
-}
-
-async function attemptLogin() {
-    const username = document.getElementById('loginUsername').value.trim();
-    const password = document.getElementById('loginPassword').value.trim();
-    
-    if (!username || !password) {
-        showLoginError('Por favor ingresa usuario y contraseña');
-        return;
-    }
-    
-    // Mostrar loading en el botón
-    const loginBtn = document.querySelector('.login-btn');
-    const originalText = loginBtn.innerHTML;
-    loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...';
-    loginBtn.disabled = true;
-    
-    try {
-        // Buscar usuario en Supabase
-        const { data: usuarios, error } = await supabaseClient
-            .from('admin_usuarios')
-            .select('*')
-            .eq('username', username)
-            .eq('activo', true);
-        
-        if (error) {
-            console.error('Error al consultar usuario:', error);
-            showLoginError('Error al conectar con el servidor');
-            return;
-        }
-        
-        // Verificar si existe el usuario
-        if (!usuarios || usuarios.length === 0) {
-            showLoginError('Usuario no encontrado');
-            return;
-        }
-        
-        const usuario = usuarios[0];
-        
-        // Verificar contraseña (en un sistema real, debería estar hasheada)
-        if (usuario.password !== password) {
-            showLoginError('Contraseña incorrecta');
-            return;
-        }
-        
-        // Login exitoso
-        isAdminLoggedIn = true;
-        currentAdminUser = usuario;
-        
-        // Cerrar modal de login
-        closeLoginModal();
-        
-        // Mostrar mensaje de bienvenida
-        showNotification(`Bienvenido ${usuario.nombre || username}`, 'success');
-        
-        // Abrir modal de admin
-        setTimeout(() => {
-            openAdminModal();
-        }, 300);
-        
-    } catch (error) {
-        console.error('Error inesperado:', error);
-        showLoginError('Error al iniciar sesión');
-    } finally {
-        // Restaurar botón
-        loginBtn.innerHTML = originalText;
-        loginBtn.disabled = false;
-    }
-}
-
-function showLoginError(message) {
-    const errorDiv = document.getElementById('loginError');
-    errorDiv.querySelector('span').textContent = message;
-    errorDiv.style.display = 'flex';
-    
-    // Limpiar después de 3 segundos
-    setTimeout(() => {
-        errorDiv.style.display = 'none';
-    }, 3000);
-}
-
-function logout() {
-    if (confirm('¿Cerrar sesión?')) {
-        isAdminLoggedIn = false;
-        currentAdminUser = null;
-        showNotification('Sesión cerrada', 'info');
-    }
-}
-
-function showNotification(message, type = 'info') {
-    // Crear elemento de notificación si no existe
-    let notification = document.getElementById('notification');
-    if (!notification) {
-        notification = document.createElement('div');
-        notification.id = 'notification';
-        document.body.appendChild(notification);
-    }
-    
-    // Configurar notificación
-    notification.className = `notification ${type}`;
-    notification.innerHTML = `
-        <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
-        <span>${message}</span>
-    `;
-    
-    // Mostrar
-    notification.style.display = 'flex';
-    
-    // Ocultar después de 3 segundos
-    setTimeout(() => {
-        notification.style.display = 'none';
-    }, 3000);
-}
-
-// ============================================================
-// MODIFICAR LA FUNCIÓN OPENADMINMODAL PARA VERIFICAR SESIÓN
-// ============================================================
-// Reemplaza tu función openAdminModal actual con esta:
-
-async function openAdminModal() {
-    // Verificar si está logueado
-    if (!isAdminLoggedIn) {
-        showLoginModal();
-        return;
-    }
-    
-    // Si está logueado, abrir el modal normalmente
-    document.getElementById('adminModal').style.display = 'block';
-    await showAdminCategoryView();
-}
-
-// ============================================================
-// AGREGAR BOTÓN DE CERRAR SESIÓN EN EL MODAL ADMIN
-// ============================================================
-// Modifica el header del modal admin para incluir el botón de logout
-// Esto lo haremos cuando actualices el HTML
-
-
+let inactivityTimer;
 
 // ============================================================
 // FECHA Y HORA
@@ -198,13 +35,12 @@ function updateDateTime() {
 setInterval(updateDateTime, 1000);
 
 // ============================================================
-// VERIFICAR Y CREAR CATEGORÍAS AUTOMÁTICAMENTE (NUEVA FUNCIÓN)
+// VERIFICAR Y CREAR CATEGORÍAS AUTOMÁTICAMENTE
 // ============================================================
 async function verificarYCrearCategorias() {
     console.log('🔍 Verificando categorías en Supabase...');
     
     try {
-        // Intentar obtener categorías
         const { data: categorias, error } = await supabaseClient
             .from('categorias')
             .select('*');
@@ -216,7 +52,6 @@ async function verificarYCrearCategorias() {
         
         console.log(`📊 Categorías encontradas: ${categorias?.length || 0}`);
         
-        // Si no hay categorías, crearlas automáticamente
         if (!categorias || categorias.length === 0) {
             console.log('🔄 No hay categorías, creando automáticamente...');
             
@@ -237,10 +72,8 @@ async function verificarYCrearCategorias() {
             
             if (insertError) {
                 console.error('❌ Error al crear categorías:', insertError);
-                alert('Error al crear categorías: ' + insertError.message);
             } else {
                 console.log('✅ Categorías creadas exitosamente');
-                alert('✅ Categorías creadas correctamente');
             }
         }
     } catch (error) {
@@ -266,7 +99,191 @@ async function loadCategories() {
 }
 
 // ============================================================
-// BÚSQUEDA INTELIGENTE DESDE SUPABASE (CORREGIDA)
+// FUNCIONES DE LOGIN
+// ============================================================
+
+function showLoginModal() {
+    if (isAdminLoggedIn) {
+        const nameSpan = document.getElementById('currentAdminName');
+        if (nameSpan && currentAdminUser) {
+            nameSpan.textContent = currentAdminUser.nombre || currentAdminUser.username;
+        }
+        openAdminModal();
+        return;
+    }
+    
+    document.getElementById('loginUsername').value = '';
+    document.getElementById('loginPassword').value = '';
+    document.getElementById('loginError').style.display = 'none';
+    
+    document.getElementById('loginModal').style.display = 'block';
+    document.getElementById('loginUsername').focus();
+}
+
+function closeLoginModal() {
+    document.getElementById('loginModal').style.display = 'none';
+}
+
+function handleKeyPress(event) {
+    if (event.key === 'Enter') {
+        attemptLogin();
+    }
+}
+
+async function attemptLogin() {
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
+    
+    if (!username || !password) {
+        showLoginError('Por favor ingresa usuario y contraseña');
+        return;
+    }
+    
+    const loginBtn = document.querySelector('.login-btn');
+    const originalText = loginBtn.innerHTML;
+    loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...';
+    loginBtn.disabled = true;
+    
+    try {
+        const { data: usuarios, error } = await supabaseClient
+            .from('admin_usuarios')
+            .select('*')
+            .eq('username', username)
+            .eq('activo', true);
+        
+        if (error) {
+            console.error('Error al consultar usuario:', error);
+            showLoginError('Error al conectar con el servidor');
+            return;
+        }
+        
+        if (!usuarios || usuarios.length === 0) {
+            showLoginError('Usuario no encontrado');
+            return;
+        }
+        
+        const usuario = usuarios[0];
+        
+        if (usuario.password !== password) {
+            showLoginError('Contraseña incorrecta');
+            return;
+        }
+        
+        isAdminLoggedIn = true;
+        currentAdminUser = usuario;
+        
+        resetInactivityTimer();
+        
+        closeLoginModal();
+        
+        showNotification(`Bienvenido ${usuario.nombre || username}`, 'success');
+        
+        const nameSpan = document.getElementById('currentAdminName');
+        if (nameSpan) {
+            nameSpan.textContent = usuario.nombre || usuario.username;
+        }
+        
+        setTimeout(() => {
+            openAdminModal();
+        }, 300);
+        
+    } catch (error) {
+        console.error('Error inesperado:', error);
+        showLoginError('Error al iniciar sesión');
+    } finally {
+        loginBtn.innerHTML = originalText;
+        loginBtn.disabled = false;
+    }
+}
+
+function showLoginError(message) {
+    const errorDiv = document.getElementById('loginError');
+    errorDiv.querySelector('span').textContent = message;
+    errorDiv.style.display = 'flex';
+    
+    setTimeout(() => {
+        errorDiv.style.display = 'none';
+    }, 3000);
+}
+
+// ============================================================
+// GESTIÓN DE SESIÓN Y TIMEOUT
+// ============================================================
+
+function resetInactivityTimer() {
+    if (inactivityTimer) {
+        clearTimeout(inactivityTimer);
+    }
+    
+    if (isAdminLoggedIn) {
+        inactivityTimer = setTimeout(() => {
+            const isAdminOpen = document.getElementById('adminModal').style.display === 'block';
+            
+            if (isAdminOpen) {
+                showNotification('Sesión expirada por inactividad (5 minutos)', 'info');
+                logout(false);
+            }
+        }, 5 * 60 * 1000);
+    }
+}
+
+['click', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => {
+    document.addEventListener(event, () => {
+        resetInactivityTimer();
+    });
+});
+
+function logout(showConfirm = true) {
+    if (showConfirm) {
+        if (!confirm('¿Cerrar sesión?')) {
+            return;
+        }
+    }
+    
+    if (inactivityTimer) {
+        clearTimeout(inactivityTimer);
+    }
+    
+    isAdminLoggedIn = false;
+    currentAdminUser = null;
+    
+    showNotification('Sesión cerrada', 'info');
+    
+    if (document.getElementById('adminModal').style.display === 'block') {
+        document.getElementById('adminModal').style.display = 'none';
+    }
+    
+    document.getElementById('adminCategoryView').style.display = 'block';
+    document.getElementById('adminProductView').style.display = 'none';
+    document.getElementById('adminAddProductView').style.display = 'none';
+}
+
+// ============================================================
+// NOTIFICACIONES
+// ============================================================
+function showNotification(message, type = 'info') {
+    let notification = document.getElementById('notification');
+    if (!notification) {
+        notification = document.createElement('div');
+        notification.id = 'notification';
+        document.body.appendChild(notification);
+    }
+    
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
+        <span>${message}</span>
+    `;
+    
+    notification.style.display = 'flex';
+    
+    setTimeout(() => {
+        notification.style.display = 'none';
+    }, 3000);
+}
+
+// ============================================================
+// BÚSQUEDA INTELIGENTE DESDE SUPABASE
 // ============================================================
 const searchInput = document.getElementById('searchInput');
 const suggestionsDropdown = document.getElementById('searchSuggestions');
@@ -283,8 +300,6 @@ searchInput.addEventListener('input', () => {
     
     searchTimeout = setTimeout(async () => {
         try {
-            console.log('🔍 Buscando:', query); // Para debug
-            
             const { data: productos, error } = await supabaseClient
                 .from('productos')
                 .select(`
@@ -299,17 +314,10 @@ searchInput.addEventListener('input', () => {
                 .eq('activo', true)
                 .limit(10);
             
-            if (error) {
-                console.error('Error en búsqueda:', error);
-                return;
-            }
-            
-            if (!productos || productos.length === 0) {
+            if (error || !productos || productos.length === 0) {
                 suggestionsDropdown.style.display = 'none';
                 return;
             }
-            
-            console.log('✅ Productos encontrados:', productos); // Para debug
             
             suggestionsDropdown.innerHTML = productos.map(p => `
                 <div class="suggestion-item" onclick="addProductToSaleFromSearch(${p.id}, '${p.codigo}')">
@@ -338,7 +346,6 @@ searchInput.addEventListener('keydown', (e) => {
         e.preventDefault();
         const query = searchInput.value.trim();
         if (query.length >= 2) {
-            // Tomar el primer resultado si existe
             const firstSuggestion = suggestionsDropdown.querySelector('.suggestion-item');
             if (firstSuggestion) {
                 firstSuggestion.click();
@@ -354,13 +361,10 @@ document.addEventListener('click', (e) => {
 });
 
 // ============================================================
-// FUNCIÓN ESPECÍFICA PARA AGREGAR DESDE BÚSQUEDA (CORREGIDA)
+// AGREGAR PRODUCTO A LA VENTA (desde búsqueda)
 // ============================================================
 async function addProductToSaleFromSearch(productId, codigo) {
-    console.log('Agregando producto:', { productId, codigo }); // Para debug
-    
     try {
-        // Buscar producto completo
         const { data: product, error } = await supabaseClient
             .from('productos')
             .select('*')
@@ -369,14 +373,10 @@ async function addProductToSaleFromSearch(productId, codigo) {
             .single();
         
         if (error || !product) {
-            console.error('Error al cargar producto:', error);
             alert('Error al cargar el producto');
             return;
         }
         
-        console.log('Producto encontrado:', product); // Para debug
-        
-        // Verificar stock
         if (product.stock <= 0) {
             alert('Producto sin stock disponible');
             return;
@@ -385,11 +385,9 @@ async function addProductToSaleFromSearch(productId, codigo) {
         suggestionsDropdown.style.display = 'none';
         searchInput.value = '';
 
-        // Verificar si ya existe en la venta actual
         const existingProductIndex = productosEnVenta.findIndex(p => p.id === product.id);
         
         if (existingProductIndex >= 0) {
-            // Incrementar cantidad si no excede stock
             const newQty = productosEnVenta[existingProductIndex].cantidad + 1;
             if (newQty > product.stock) {
                 alert(`Solo hay ${product.stock} unidades disponibles`);
@@ -416,79 +414,8 @@ async function addProductToSaleFromSearch(productId, codigo) {
     }
 }
 
-// ============================================================
-// ACTUALIZAR TAMBIÉN LA FUNCIÓN DE AGREGAR DESDE INVENTARIO
-// ============================================================
 async function addProductToSale(productId) {
     await addProductToSaleFromSearch(productId, null);
-}
-
-// ============================================================
-// AGREGAR PRODUCTO A LA VENTA (desde búsqueda o inventario)
-// ============================================================
-async function addProductToSale(productId, codigo = null) {
-    // Si recibimos código, buscar el producto por código
-    if (codigo) {
-        const { data: productos } = await supabaseClient
-            .from('productos')
-            .select('*')
-            .eq('codigo', codigo)
-            .eq('activo', true);
-        
-        if (productos && productos.length > 0) {
-            productId = productos[0].id;
-        } else {
-            alert('Producto no encontrado');
-            return;
-        }
-    }
-    
-    // Buscar producto completo
-    const { data: product, error } = await supabaseClient
-        .from('productos')
-        .select('*')
-        .eq('id', productId)
-        .eq('activo', true)
-        .single();
-    
-    if (error || !product) {
-        alert('Error al cargar el producto');
-        return;
-    }
-    
-    // Verificar stock
-    if (product.stock <= 0) {
-        alert('Producto sin stock disponible');
-        return;
-    }
-    
-    suggestionsDropdown.style.display = 'none';
-    searchInput.value = '';
-
-    // Verificar si ya existe en la venta actual
-    const existingProductIndex = productosEnVenta.findIndex(p => p.id === product.id);
-    
-    if (existingProductIndex >= 0) {
-        // Incrementar cantidad si no excede stock
-        const newQty = productosEnVenta[existingProductIndex].cantidad + 1;
-        if (newQty > product.stock) {
-            alert(`Solo hay ${product.stock} unidades disponibles`);
-            return;
-        }
-        productosEnVenta[existingProductIndex].cantidad = newQty;
-    } else {
-        productosEnVenta.push({
-            id: product.id,
-            codigo: product.codigo,
-            nombre: product.nombre,
-            marca: product.marca || 'Sin marca',
-            precio: parseFloat(product.precio),
-            cantidad: 1,
-            stock: product.stock
-        });
-    }
-    
-    renderSalesTable();
 }
 
 // ============================================================
@@ -545,7 +472,6 @@ async function changeQty(productId, delta) {
         return;
     }
     
-    // Verificar stock disponible
     const { data: product } = await supabaseClient
         .from('productos')
         .select('stock')
@@ -674,7 +600,6 @@ async function confirmPayment() {
     const montoRecibido = metodo === 'Efectivo' ? parseFloat(document.getElementById('cashReceived').value) || 0 : null;
     const cambio = metodo === 'Efectivo' ? montoRecibido - total : 0;
     
-    // Crear la venta
     const { data: venta, error: ventaError } = await supabaseClient
         .from('ventas')
         .insert([{
@@ -691,7 +616,6 @@ async function confirmPayment() {
         return;
     }
     
-    // Insertar detalles
     const detalles = productosEnVenta.map(p => ({
         venta_id: venta.id,
         producto_id: p.id,
@@ -708,14 +632,12 @@ async function confirmPayment() {
         return;
     }
     
-    // Mostrar mensaje de éxito
     let msg = `✅ ¡Venta registrada!\nMétodo: ${metodo}\nTotal: $${total.toFixed(2)}`;
     if (metodo === 'Efectivo') {
         msg += `\nRecibido: $${montoRecibido.toFixed(2)}\nCambio: $${cambio.toFixed(2)}`;
     }
     alert(msg);
     
-    // Limpiar venta
     closePaymentModal();
     productosEnVenta = [];
     renderSalesTable();
@@ -765,8 +687,6 @@ async function renderCategoryGrid() {
             grid.innerHTML = '<div class="inv-empty"><i class="fas fa-folder-open"></i><p>No hay categorías disponibles</p></div>';
             return;
         }
-        
-        console.log('Categorías cargadas:', categorias);
         
         grid.innerHTML = categorias.map(cat => {
             const count = cat.productos?.[0]?.count || 0;
@@ -870,30 +790,33 @@ function filterInventory() {
 }
 
 // ============================================================
-// MODAL ADMIN - GESTIÓN DE PRODUCTOS (REDISEÑADO)
+// MODAL ADMIN - GESTIÓN DE PRODUCTOS
 // ============================================================
-let adminCurrentCategory = null;
-let adminEditMode = false;
-let adminEditingProductId = null;
 
 async function openAdminModal() {
+    if (!isAdminLoggedIn) {
+        showLoginModal();
+        return;
+    }
+    
+    resetInactivityTimer();
+    
     document.getElementById('adminModal').style.display = 'block';
     await showAdminCategoryView();
 }
 
 function closeAdminModal() {
     document.getElementById('adminModal').style.display = 'none';
-    // Resetear vistas
+    
     document.getElementById('adminCategoryView').style.display = 'block';
     document.getElementById('adminProductView').style.display = 'none';
     document.getElementById('adminAddProductView').style.display = 'none';
     adminEditMode = false;
     adminEditingProductId = null;
+    
+    logout(false);
 }
 
-// ============================================================
-// VISTA DE CATEGORÍAS (ADMIN)
-// ============================================================
 async function showAdminCategoryView() {
     adminCurrentCategory = null;
     document.getElementById('adminCategoryView').style.display = 'block';
@@ -942,9 +865,6 @@ async function renderAdminCategoryGrid() {
     }
 }
 
-// ============================================================
-// VISTA DE PRODUCTOS POR CATEGORÍA (ADMIN)
-// ============================================================
 async function showAdminProductView(categoryId) {
     adminCurrentCategory = categoryId;
     
@@ -1051,16 +971,12 @@ function filterAdminProducts() {
     }
 }
 
-// ============================================================
-// VISTA PARA AGREGAR NUEVO PRODUCTO
-// ============================================================
 async function showAdminAddProductView() {
     document.getElementById('adminCategoryView').style.display = 'none';
     document.getElementById('adminProductView').style.display = 'none';
     document.getElementById('adminAddProductView').style.display = 'block';
     document.getElementById('adminModalTitle').innerHTML = '<i class="fas fa-plus-circle"></i> Agregar Nuevo Producto';
     
-    // Cargar categorías en el select
     const select = document.getElementById('adminProdCategory');
     select.innerHTML = '<option value="">Cargando categorías...</option>';
     
@@ -1093,9 +1009,6 @@ async function showAdminAddProductView() {
     }
 }
 
-// ============================================================
-// GUARDAR CAMBIOS DE PRODUCTO
-// ============================================================
 async function saveProductChanges(productId) {
     const precio = parseFloat(document.getElementById(`price_${productId}`).value);
     const stock = parseInt(document.getElementById(`stock_${productId}`).value);
@@ -1125,7 +1038,6 @@ async function saveProductChanges(productId) {
         
         alert('✅ Producto actualizado correctamente');
         
-        // Recargar la vista
         if (adminCurrentCategory) {
             await renderAdminProductGrid(adminCurrentCategory);
         }
@@ -1136,16 +1048,12 @@ async function saveProductChanges(productId) {
     }
 }
 
-// ============================================================
-// ELIMINAR PRODUCTO (DESACTIVAR)
-// ============================================================
 async function deleteProduct(productId, productName) {
     if (!confirm(`¿Estás seguro de eliminar "${productName}"?`)) {
         return;
     }
     
     try {
-        // En lugar de borrar, lo desactivamos para mantener integridad de ventas
         const { error } = await supabaseClient
             .from('productos')
             .update({ activo: false })
@@ -1155,7 +1063,6 @@ async function deleteProduct(productId, productName) {
         
         alert('✅ Producto eliminado (desactivado) correctamente');
         
-        // Recargar la vista
         if (adminCurrentCategory) {
             await renderAdminProductGrid(adminCurrentCategory);
         }
@@ -1166,9 +1073,6 @@ async function deleteProduct(productId, productName) {
     }
 }
 
-// ============================================================
-// AGREGAR NUEVO PRODUCTO (FORMULARIO)
-// ============================================================
 document.getElementById('adminAddProductForm')?.addEventListener('submit', async function(e) {
     e.preventDefault();
     
@@ -1207,7 +1111,6 @@ document.getElementById('adminAddProductForm')?.addEventListener('submit', async
         } else {
             showAdminMessage('✅ Producto agregado correctamente', 'success');
             
-            // Volver a la vista de productos de la categoría
             setTimeout(() => {
                 if (adminCurrentCategory) {
                     showAdminProductView(adminCurrentCategory);
@@ -1229,59 +1132,11 @@ function showAdminMessage(text, type) {
     msg.style.display = 'block';
 }
 
-
 // ============================================================
-// CREAR CATEGORÍAS POR DEFECTO
-// ============================================================
-async function crearCategoriasDefault() {
-    const categoriasDefault = [
-        { nombre: 'Herramientas Manuales', icono: 'fa-wrench', color: '#1565c0' },
-        { nombre: 'Herramientas Eléctricas', icono: 'fa-bolt', color: '#e65100' },
-        { nombre: 'Jardinería y Agricultura', icono: 'fa-seedling', color: '#2e7d32' },
-        { nombre: 'Equipo de Seguridad', icono: 'fa-hard-hat', color: '#b71c1c' },
-        { nombre: 'Plomería', icono: 'fa-faucet', color: '#00695c' },
-        { nombre: 'Construcción', icono: 'fa-building', color: '#4e342e' },
-        { nombre: 'Ferretería', icono: 'fa-screwdriver-wrench', color: '#37474f' },
-        { nombre: 'Otras Categorías', icono: 'fa-ellipsis-h', color: '#6a1b9a' }
-    ];
-    
-    try {
-        const { data, error } = await supabaseClient
-            .from('categorias')
-            .insert(categoriasDefault)
-            .select();
-        
-        if (error) {
-            console.error('Error creando categorías:', error);
-            alert('Error al crear categorías: ' + error.message);
-            return;
-        }
-        
-        alert('✅ Categorías creadas correctamente');
-        location.reload();
-        
-    } catch (error) {
-        console.error('Error:', error);
-        alert('Error al conectar con Supabase');
-    }
-}
-
-// ============================================================
-// CIERRE DE MODALES
-// ============================================================
-window.addEventListener('click', (e) => {
-    if (e.target === document.getElementById('inventoryModal')) closeInventoryModal();
-    if (e.target === document.getElementById('returnModal')) closeReturnModal();
-    if (e.target === document.getElementById('paymentModal')) closePaymentModal();
-    if (e.target === document.getElementById('adminModal')) closeAdminModal();
-});
-// ============================================================
-// DEVOLUCIONES - FUNCIONES COMPLETAS
+// DEVOLUCIONES
 // ============================================================
 
-// Mostrar modal de devolución
 function showReturnModal() {
-    // Limpiar devoluciones antiguas (más de 4 días)
     cleanOldReturns();
     updateReturnOptions();
     document.getElementById('returnModal').style.display = 'block';
@@ -1292,7 +1147,6 @@ function closeReturnModal() {
     document.getElementById('returnSearchInput').value = '';
 }
 
-// Limpiar devoluciones antiguas de localStorage
 function cleanOldReturns() {
     const returns = JSON.parse(localStorage.getItem('returns') || '[]');
     const now = new Date();
@@ -1300,12 +1154,10 @@ function cleanOldReturns() {
     localStorage.setItem('returns', JSON.stringify(filtered));
 }
 
-// Actualizar opciones de devolución
 function updateReturnOptions() {
     const tbody = document.getElementById('returnBody');
     tbody.innerHTML = '';
 
-    // Productos de la venta actual
     productosEnVenta.forEach(p => {
         const tr = document.createElement('tr');
         tr.setAttribute('data-code', p.codigo);
@@ -1322,7 +1174,6 @@ function updateReturnOptions() {
         tbody.appendChild(tr);
     });
 
-    // Productos de ventas anteriores (localStorage)
     const returns = JSON.parse(localStorage.getItem('returns') || '[]');
     const now = new Date();
     const salesCodes = productosEnVenta.map(p => p.codigo);
@@ -1347,7 +1198,6 @@ function updateReturnOptions() {
     });
 }
 
-// Buscar en devoluciones
 function searchReturns() {
     const query = document.getElementById('returnSearchInput').value.toLowerCase();
     document.querySelectorAll('#returnBody tr').forEach(row => {
@@ -1357,7 +1207,6 @@ function searchReturns() {
     });
 }
 
-// Actualizar precio en devolución
 function updateReturnPrice(input, price) {
     const code = input.closest('tr').getAttribute('data-code');
     const cell = document.getElementById(`rp_${code}`);
@@ -1366,7 +1215,6 @@ function updateReturnPrice(input, price) {
     }
 }
 
-// Procesar devolución
 async function processReturn() {
     const rows = document.querySelectorAll('#returnBody tr');
     const now = new Date().toISOString();
@@ -1382,7 +1230,6 @@ async function processReturn() {
         if (returnQty <= 0) continue;
 
         if (source === 'sales') {
-            // Buscar el producto en la venta actual
             const productIndex = productosEnVenta.findIndex(p => p.codigo === code);
             if (productIndex === -1) continue;
 
@@ -1393,20 +1240,17 @@ async function processReturn() {
                 return;
             }
 
-            // Registrar para devolución en Supabase
             productosADevolver.push({
                 producto_id: product.id,
                 cantidad: returnQty,
                 precio_unit: product.precio
             });
 
-            // Actualizar cantidad en venta actual
             product.cantidad -= returnQty;
             if (product.cantidad === 0) {
                 productosEnVenta.splice(productIndex, 1);
             }
 
-            // Guardar en localStorage para devoluciones futuras
             returns.push({
                 code: product.codigo,
                 qty: returnQty,
@@ -1435,21 +1279,12 @@ async function processReturn() {
         }
     }
 
-    // Guardar en localStorage
     localStorage.setItem('returns', JSON.stringify(returns));
 
-    // Si hay devoluciones de la venta actual, registrarlas en Supabase
     if (productosADevolver.length > 0) {
-        try {
-            // Aquí puedes agregar la lógica para registrar devoluciones en Supabase
-            // Por ahora solo mostramos mensaje
-            console.log('Productos a devolver en Supabase:', productosADevolver);
-        } catch (error) {
-            console.error('Error registrando devolución en Supabase:', error);
-        }
+        console.log('Productos a devolver en Supabase:', productosADevolver);
     }
 
-    // Actualizar tabla de ventas
     renderSalesTable();
 
     if (totalRemoved > 0) {
@@ -1462,26 +1297,17 @@ async function processReturn() {
 }
 
 // ============================================================
-// ACTUALIZAR WINDOW.ONLOAD PARA INCLUIR LIMPIEZA DE RETURNS
+// CIERRE DE MODALES
 // ============================================================
-// Reemplaza tu window.onload actual con este:
-
-window.onload = async function() {
-    updateDateTime();
-    await verificarYCrearCategorias();
-    await loadCategories();
-    updateEmptyState();
-    cleanOldReturns(); // <-- Agregar esta línea
-    
-    // Limpiar ventas antiguas
-    try {
-        await supabaseClient.rpc('limpiar_ventas_antiguas');
-    } catch (error) {
-        console.log('Función limpiar_ventas_antiguas no disponible aún');
+window.addEventListener('click', (e) => {
+    if (e.target === document.getElementById('inventoryModal')) closeInventoryModal();
+    if (e.target === document.getElementById('returnModal')) closeReturnModal();
+    if (e.target === document.getElementById('paymentModal')) closePaymentModal();
+    if (e.target === document.getElementById('adminModal')) {
+        closeAdminModal();
     }
-};
-
-
+    if (e.target === document.getElementById('loginModal')) closeLoginModal();
+});
 
 // ============================================================
 // INICIALIZACIÓN
@@ -1491,8 +1317,8 @@ window.onload = async function() {
     await verificarYCrearCategorias();
     await loadCategories();
     updateEmptyState();
+    cleanOldReturns();
     
-    // Limpiar ventas antiguas
     try {
         await supabaseClient.rpc('limpiar_ventas_antiguas');
     } catch (error) {

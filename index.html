@@ -7,9 +7,7 @@
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-
 <body>
-    
 
     <div class="header">
         <div class="header-logo">
@@ -29,48 +27,48 @@
                 <input type="text" id="time" readonly>
             </div>
         </div>
-        
-        <!-- Modal de Login -->
-<div id="loginModal" class="modal">
-    <div class="modal-content modal-small">
-        <div class="modal-header">
-            <h2><i class="fas fa-lock"></i> Acceso Administrador</h2>
-            <span class="close" onclick="closeLoginModal()"><i class="fas fa-times"></i></span>
-        </div>
-        <div class="login-body">
-            <div class="login-icon">
-                <i class="fas fa-user-shield"></i>
-            </div>
-            <div class="login-form">
-                <div class="form-group">
-                    <label for="loginUsername"><i class="fas fa-user"></i> Usuario</label>
-                    <input type="text" id="loginUsername" placeholder="Ingresa tu usuario" autocomplete="off">
-                </div>
-                <div class="form-group">
-                    <label for="loginPassword"><i class="fas fa-key"></i> Contraseña</label>
-                    <input type="password" id="loginPassword" placeholder="Ingresa tu contraseña" onkeypress="handleKeyPress(event)">
-                </div>
-                <div id="loginError" class="login-error" style="display:none;">
-                    <i class="fas fa-exclamation-circle"></i>
-                    <span>Usuario o contraseña incorrectos</span>
-                </div>
-                <button class="btn btn-primary login-btn" onclick="attemptLogin()">
-                    <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
-                </button>
-            </div>
-            <div class="login-footer">
-                <small>Solo personal autorizado</small>
-            </div>
-        </div>
+        <!-- BOTÓN ADMIN ACTUALIZADO - Llama a showLoginModal() -->
+        <button class="btn btn-primary btn-admin" onclick="showLoginModal()">
+            <i class="fas fa-cogs"></i> Admin Inventario
+        </button>
     </div>
-</div>
 
-<!-- Botón de Admin actualizado (reemplaza el existente) -->
-<button class="btn btn-primary btn-admin" onclick="showLoginModal()">
-    <i class="fas fa-cogs"></i> Admin Inventario
-</button>
+    <!-- =================================================== -->
+    <!-- MODAL DE LOGIN (AGREGADO DESPUÉS DEL HEADER)        -->
+    <!-- =================================================== -->
+    <div id="loginModal" class="modal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2><i class="fas fa-lock"></i> Acceso Administrador</h2>
+                <span class="close" onclick="closeLoginModal()"><i class="fas fa-times"></i></span>
+            </div>
+            <div class="login-body">
+                <div class="login-icon">
+                    <i class="fas fa-user-shield"></i>
+                </div>
+                <div class="login-form">
+                    <div class="form-group">
+                        <label for="loginUsername"><i class="fas fa-user"></i> Usuario</label>
+                        <input type="text" id="loginUsername" placeholder="Ingresa tu usuario" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword"><i class="fas fa-key"></i> Contraseña</label>
+                        <input type="password" id="loginPassword" placeholder="Ingresa tu contraseña" onkeypress="handleKeyPress(event)">
+                    </div>
+                    <div id="loginError" class="login-error" style="display:none;">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <span>Usuario o contraseña incorrectos</span>
+                    </div>
+                    <button class="btn btn-primary login-btn" onclick="attemptLogin()">
+                        <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+                    </button>
+                </div>
+                <div class="login-footer">
+                    <small>Solo personal autorizado</small>
+                </div>
+            </div>
+        </div>
     </div>
-    
 
     <div class="search-section">
         <div class="search-wrapper">
@@ -173,7 +171,7 @@
         </div>
     </div>
 
-    <!-- Modal Inventario (el original) -->
+    <!-- Modal Inventario -->
     <div id="inventoryModal" class="modal">
         <div class="modal-content modal-large">
             <div class="modal-header">
@@ -226,93 +224,110 @@
                     <tbody id="returnBody"></tbody>
                 </table>
             </div>
-            <button class="btn btn-danger confirm-return" onclick="showReturnModal()">
-                <i class="fas fa-undo"></i> Confirmar Devolución
+            <button class="btn btn-danger confirm-return" onclick="processReturn()">
+                <i class="fas fa-check"></i> Confirmar Devolución
             </button>
         </div>
     </div>
 
-<!-- Modal Admin Inventario (REDISEÑADO) -->
-<div id="adminModal" class="modal">
-    <div class="modal-content modal-large">
-        <div class="modal-header">
-            <h2 id="adminModalTitle"><i class="fas fa-boxes"></i> Administrar Inventario</h2>
-            <span class="close" onclick="closeAdminModal()"><i class="fas fa-times"></i></span>
-        </div>
-        
-        <!-- VISTA DE CATEGORÍAS -->
-        <div id="adminCategoryView">
-            <div class="admin-view-header">
-                <span class="product-view-title">Selecciona una categoría para administrar productos</span>
-            </div>
-            <div class="category-grid" id="adminCategoryGrid"></div>
-        </div>
-        
-        <!-- VISTA DE PRODUCTOS POR CATEGORÍA -->
-        <div id="adminProductView" style="display:none;">
-            <div class="admin-view-header">
-                <button class="btn btn-secondary btn-back" onclick="showAdminCategoryView()">
-                    <i class="fas fa-arrow-left"></i> Categorías
-                </button>
-                <span class="product-view-title" id="currentAdminCategoryLabel"></span>
-                <button class="btn btn-success btn-add" onclick="showAdminAddProductView()">
-                    <i class="fas fa-plus"></i> Nuevo Producto
-                </button>
-            </div>
-            <div class="modal-search">
-                <i class="fas fa-search"></i>
-                <input type="text" id="adminSearch" placeholder="Filtrar productos por nombre, código o marca..." oninput="filterAdminProducts()">
-            </div>
-            <div class="admin-product-grid" id="adminProductsGrid"></div>
-        </div>
-        
-        <!-- VISTA PARA AGREGAR NUEVO PRODUCTO -->
-        <div id="adminAddProductView" style="display:none;">
-            <div class="admin-view-header">
-                <button class="btn btn-secondary btn-back" onclick="showAdminProductView(adminCurrentCategory)">
-                    <i class="fas fa-arrow-left"></i> Volver
-                </button>
-                <span class="product-view-title">Agregar Nuevo Producto</span>
-            </div>
-            <div class="form-container">
-                <form id="adminAddProductForm">
-                    <div class="form-group">
-                        <label for="adminProdCode">Código (único) *</label>
-                        <input type="text" id="adminProdCode" required placeholder="Ej: 016">
-                    </div>
-                    <div class="form-group">
-                        <label for="adminProdName">Nombre del producto *</label>
-                        <input type="text" id="adminProdName" required placeholder="Ej: Sierra circular">
-                    </div>
-                    <div class="form-group">
-                        <label for="adminProdBrand">Marca</label>
-                        <input type="text" id="adminProdBrand" placeholder="Ej: Truper">
-                    </div>
-                    <div class="form-group">
-                        <label for="adminProdCategory">Categoría *</label>
-                        <select id="adminProdCategory" required></select>
-                    </div>
-                    <div class="form-group">
-                        <label for="adminProdPrice">Precio (MXN) *</label>
-                        <input type="number" id="adminProdPrice" min="0" step="0.01" required placeholder="0.00">
-                    </div>
-                    <div class="form-group">
-                        <label for="adminProdStock">Stock Inicial *</label>
-                        <input type="number" id="adminProdStock" min="0" required value="0">
-                    </div>
-                    <div class="form-group">
-                        <label for="adminProdMinStock">Stock Mínimo</label>
-                        <input type="number" id="adminProdMinStock" min="1" value="1">
-                    </div>
-                    <button type="submit" class="btn btn-success">
-                        <i class="fas fa-plus"></i> Agregar Producto
+    <!-- =================================================== -->
+    <!-- MODAL ADMIN INVENTARIO (REDISEÑADO CON LOGIN)       -->
+    <!-- =================================================== -->
+    <div id="adminModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header">
+                <h2 id="adminModalTitle"><i class="fas fa-boxes"></i> Administrar Inventario</h2>
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <!-- Badge de usuario (SOLUCIÓN 4) -->
+                    <span class="admin-user-badge" id="adminUserBadge">
+                        <i class="fas fa-user-shield"></i> 
+                        <span id="currentAdminName">Administrador</span>
+                    </span>
+                    <!-- Botón de logout (SOLUCIÓN 4) -->
+                    <button class="btn btn-sm btn-logout" onclick="logout(true)" title="Cerrar sesión">
+                        <i class="fas fa-sign-out-alt"></i> Salir
                     </button>
-                </form>
-                <div id="adminMessage" class="admin-message"></div>
+                    <span class="close" onclick="closeAdminModal()"><i class="fas fa-times"></i></span>
+                </div>
+            </div>
+            
+            <!-- VISTA DE CATEGORÍAS -->
+            <div id="adminCategoryView">
+                <div class="admin-view-header">
+                    <span class="product-view-title">Selecciona una categoría para administrar productos</span>
+                </div>
+                <div class="category-grid" id="adminCategoryGrid"></div>
+            </div>
+            
+            <!-- VISTA DE PRODUCTOS POR CATEGORÍA -->
+            <div id="adminProductView" style="display:none;">
+                <div class="admin-view-header">
+                    <button class="btn btn-secondary btn-back" onclick="showAdminCategoryView()">
+                        <i class="fas fa-arrow-left"></i> Categorías
+                    </button>
+                    <span class="product-view-title" id="currentAdminCategoryLabel"></span>
+                    <button class="btn btn-success btn-add" onclick="showAdminAddProductView()">
+                        <i class="fas fa-plus"></i> Nuevo Producto
+                    </button>
+                </div>
+                <div class="modal-search">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="adminSearch" placeholder="Filtrar productos por nombre, código o marca..." oninput="filterAdminProducts()">
+                </div>
+                <div class="admin-product-grid" id="adminProductsGrid"></div>
+            </div>
+            
+            <!-- VISTA PARA AGREGAR NUEVO PRODUCTO -->
+            <div id="adminAddProductView" style="display:none;">
+                <div class="admin-view-header">
+                    <button class="btn btn-secondary btn-back" onclick="showAdminProductView(adminCurrentCategory)">
+                        <i class="fas fa-arrow-left"></i> Volver
+                    </button>
+                    <span class="product-view-title">Agregar Nuevo Producto</span>
+                </div>
+                <div class="form-container">
+                    <form id="adminAddProductForm">
+                        <div class="form-group">
+                            <label for="adminProdCode">Código (único) *</label>
+                            <input type="text" id="adminProdCode" required placeholder="Ej: 016">
+                        </div>
+                        <div class="form-group">
+                            <label for="adminProdName">Nombre del producto *</label>
+                            <input type="text" id="adminProdName" required placeholder="Ej: Sierra circular">
+                        </div>
+                        <div class="form-group">
+                            <label for="adminProdBrand">Marca</label>
+                            <input type="text" id="adminProdBrand" placeholder="Ej: Truper">
+                        </div>
+                        <div class="form-group">
+                            <label for="adminProdCategory">Categoría *</label>
+                            <select id="adminProdCategory" required></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="adminProdPrice">Precio (MXN) *</label>
+                            <input type="number" id="adminProdPrice" min="0" step="0.01" required placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label for="adminProdStock">Stock Inicial *</label>
+                            <input type="number" id="adminProdStock" min="0" required value="0">
+                        </div>
+                        <div class="form-group">
+                            <label for="adminProdMinStock">Stock Mínimo</label>
+                            <input type="number" id="adminProdMinStock" min="1" value="1">
+                        </div>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-plus"></i> Agregar Producto
+                        </button>
+                    </form>
+                    <div id="adminMessage" class="admin-message"></div>
+                </div>
             </div>
         </div>
     </div>
-</div>
+
+    <!-- Notificación flotante (se crea dinámicamente pero la dejamos aquí por si acaso) -->
+    <div id="notification" style="display:none;"></div>
+
     <!-- Supabase CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="script.js"></script>
