@@ -6,6 +6,7 @@
     <title>Ferretería Alex - Punto de Venta</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
 </head>
 <body>
 
@@ -27,14 +28,14 @@
                 <input type="text" id="time" readonly>
             </div>
         </div>
-        <!-- BOTÓN ADMIN ACTUALIZADO - Llama a showLoginModal() -->
+        <!-- BOTÓN ADMIN - Llama a showLoginModal() -->
         <button class="btn btn-primary btn-admin" onclick="showLoginModal()">
             <i class="fas fa-cogs"></i> Admin Inventario
         </button>
     </div>
 
     <!-- =================================================== -->
-    <!-- MODAL DE LOGIN (AGREGADO DESPUÉS DEL HEADER)        -->
+    <!-- MODAL DE LOGIN -->
     <!-- =================================================== -->
     <div id="loginModal" class="modal">
         <div class="modal-content modal-small">
@@ -111,6 +112,10 @@
             </button>
             <button class="btn btn-warning" onclick="showReturnModal()">
                 <i class="fas fa-undo"></i> Devolución
+            </button>
+            <!-- BOTÓN DE CORTE DEL DÍA -->
+            <button class="btn btn-info" onclick="showCorteModal()">
+                <i class="fas fa-chart-bar"></i> Corte del Día
             </button>
             <button class="btn btn-success" onclick="pay()">
                 <i class="fas fa-cash-register"></i> Pagar
@@ -197,53 +202,88 @@
         </div>
     </div>
 
-    <!-- Modal Devolución -->
+    <!-- =================================================== -->
+    <!-- MODAL DEVOLUCIONES POR DÍA -->
+    <!-- =================================================== -->
     <div id="returnModal" class="modal">
-        <div class="modal-content">
+        <div class="modal-content modal-large">
             <div class="modal-header">
-                <h2><i class="fas fa-undo"></i> Devolución de Producto</h2>
+                <h2><i class="fas fa-undo"></i> Devoluciones por Día</h2>
                 <span class="close" onclick="closeReturnModal()"><i class="fas fa-times"></i></span>
             </div>
-            <div class="return-search-section">
-                <i class="fas fa-search"></i>
-                <input type="text" id="returnSearchInput" placeholder="Buscar en devoluciones..." oninput="searchReturns()">
+            
+            <!-- Selector de fecha -->
+            <div class="return-date-selector">
+                <div class="date-picker">
+                    <label for="returnDate"><i class="fas fa-calendar-alt"></i> Seleccionar fecha:</label>
+                    <input type="date" id="returnDate" onchange="loadSalesByDate()">
+                </div>
+                <div class="date-summary" id="dateSummary">
+                    <span class="summary-item">
+                        <i class="fas fa-shopping-cart"></i>
+                        <span id="totalVentasDia">0</span> ventas
+                    </span>
+                    <span class="summary-item">
+                        <i class="fas fa-undo"></i>
+                        <span id="totalDevueltoDia">$0.00</span> devuelto
+                    </span>
+                </div>
             </div>
-            <div class="return-table-container">
-                <table id="returnTable">
-                    <thead>
-                        <tr>
-                            <th>Marca</th>
-                            <th>Artículo</th>
-                            <th>Código</th>
-                            <th>Disponible</th>
-                            <th>A Devolver</th>
-                            <th>Precio Unit.</th>
-                            <th>Subtotal</th>
-                        </tr>
-                    </thead>
-                    <tbody id="returnBody"></tbody>
-                </table>
+
+            <!-- Tabs: Ventas del día / Historial de devoluciones -->
+            <div class="return-tabs">
+                <button class="tab-btn active" onclick="switchReturnTab('ventas')">
+                    <i class="fas fa-receipt"></i> Ventas del día
+                </button>
+                <button class="tab-btn" onclick="switchReturnTab('historial')">
+                    <i class="fas fa-history"></i> Historial de devoluciones
+                </button>
             </div>
-            <button class="btn btn-danger confirm-return" onclick="processReturn()">
-                <i class="fas fa-check"></i> Confirmar Devolución
-            </button>
+
+            <!-- Panel: Ventas del día -->
+            <div id="ventasDiaPanel" class="tab-panel active">
+                <div class="return-search-section">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="ventasDiaSearch" placeholder="Buscar en ventas del día..." oninput="filterVentasDia()">
+                </div>
+                <div class="ventas-dia-container" id="ventasDiaContainer">
+                    <!-- Se carga dinámicamente -->
+                </div>
+                <div class="return-actions">
+                    <button class="btn btn-success" onclick="procesarDevolucionesSeleccionadas()">
+                        <i class="fas fa-check"></i> Procesar devoluciones seleccionadas
+                    </button>
+                    <span class="selected-count" id="selectedCount">0 productos seleccionados</span>
+                </div>
+            </div>
+
+            <!-- Panel: Historial de devoluciones -->
+            <div id="historialPanel" class="tab-panel">
+                <div class="return-search-section">
+                    <i class="fas fa-search"></i>
+                    <input type="text" id="historialSearch" placeholder="Buscar en historial..." oninput="filterHistorial()">
+                </div>
+                <div class="historial-container" id="historialContainer">
+                    <!-- Se carga dinámicamente -->
+                </div>
+            </div>
         </div>
     </div>
 
     <!-- =================================================== -->
-    <!-- MODAL ADMIN INVENTARIO (REDISEÑADO CON LOGIN)       -->
+    <!-- MODAL ADMIN INVENTARIO -->
     <!-- =================================================== -->
     <div id="adminModal" class="modal">
         <div class="modal-content modal-large">
             <div class="modal-header">
                 <h2 id="adminModalTitle"><i class="fas fa-boxes"></i> Administrar Inventario</h2>
                 <div style="display: flex; gap: 10px; align-items: center;">
-                    <!-- Badge de usuario (SOLUCIÓN 4) -->
+                    <!-- Badge de usuario -->
                     <span class="admin-user-badge" id="adminUserBadge">
                         <i class="fas fa-user-shield"></i> 
                         <span id="currentAdminName">Administrador</span>
                     </span>
-                    <!-- Botón de logout (SOLUCIÓN 4) -->
+                    <!-- Botón de logout -->
                     <button class="btn btn-sm btn-logout" onclick="logout(true)" title="Cerrar sesión">
                         <i class="fas fa-sign-out-alt"></i> Salir
                     </button>
@@ -325,11 +365,142 @@
         </div>
     </div>
 
-    <!-- Notificación flotante (se crea dinámicamente pero la dejamos aquí por si acaso) -->
+    <!-- =================================================== -->
+    <!-- MODAL CORTE DE CAJA -->
+    <!-- =================================================== -->
+    <div id="corteModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header" style="background: linear-gradient(135deg, #37474f, #455a64);">
+                <h2><i class="fas fa-chart-bar"></i> Corte de Caja</h2>
+                <span class="close" onclick="closeCorteModal()"><i class="fas fa-times"></i></span>
+            </div>
+            
+            <div class="corte-body">
+                <!-- Selector de fecha -->
+                <div class="corte-date-selector">
+                    <div class="date-picker">
+                        <label for="corteDate"><i class="fas fa-calendar-alt"></i> Fecha:</label>
+                        <input type="date" id="corteDate" onchange="loadCorteData()">
+                    </div>
+                    <button class="btn btn-primary" onclick="exportCortePDF()">
+                        <i class="fas fa-file-pdf"></i> Exportar PDF
+                    </button>
+                </div>
+                
+                <!-- Resumen del corte -->
+                <div class="corte-resumen">
+                    <div class="resumen-card total-ventas">
+                        <div class="resumen-icon">
+                            <i class="fas fa-shopping-cart"></i>
+                        </div>
+                        <div class="resumen-info">
+                            <span class="resumen-label">Total Ventas</span>
+                            <span class="resumen-value" id="corteTotalVentas">$0.00</span>
+                        </div>
+                    </div>
+                    
+                    <div class="resumen-card total-efectivo">
+                        <div class="resumen-icon">
+                            <i class="fas fa-money-bill-wave"></i>
+                        </div>
+                        <div class="resumen-info">
+                            <span class="resumen-label">Efectivo</span>
+                            <span class="resumen-value" id="corteTotalEfectivo">$0.00</span>
+                        </div>
+                    </div>
+                    
+                    <div class="resumen-card total-tarjeta">
+                        <div class="resumen-icon">
+                            <i class="fas fa-credit-card"></i>
+                        </div>
+                        <div class="resumen-info">
+                            <span class="resumen-label">Tarjeta</span>
+                            <span class="resumen-value" id="corteTotalTarjeta">$0.00</span>
+                        </div>
+                    </div>
+                    
+                    <div class="resumen-card total-devoluciones">
+                        <div class="resumen-icon">
+                            <i class="fas fa-undo"></i>
+                        </div>
+                        <div class="resumen-info">
+                            <span class="resumen-label">Devoluciones</span>
+                            <span class="resumen-value" id="corteTotalDevoluciones">$0.00</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Estadísticas -->
+                <div class="corte-estadisticas">
+                    <div class="estadistica-item">
+                        <span class="estadistica-label">Número de ventas:</span>
+                        <span class="estadistica-value" id="corteNumVentas">0</span>
+                    </div>
+                    <div class="estadistica-item">
+                        <span class="estadistica-label">Ticket promedio:</span>
+                        <span class="estadistica-value" id="corteTicketPromedio">$0.00</span>
+                    </div>
+                    <div class="estadistica-item">
+                        <span class="estadistica-label">Productos vendidos:</span>
+                        <span class="estadistica-value" id="corteProductosVendidos">0</span>
+                    </div>
+                </div>
+                
+                <!-- Tabs: Ventas / Devoluciones -->
+                <div class="corte-tabs">
+                    <button class="corte-tab-btn active" onclick="switchCorteTab('ventas')">
+                        <i class="fas fa-receipt"></i> Ventas del día
+                    </button>
+                    <button class="corte-tab-btn" onclick="switchCorteTab('devoluciones')">
+                        <i class="fas fa-undo"></i> Devoluciones del día
+                    </button>
+                </div>
+                
+                <!-- Panel de ventas -->
+                <div id="corteVentasPanel" class="corte-panel active">
+                    <div class="corte-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="corteVentasSearch" placeholder="Buscar en ventas..." oninput="filterCorteVentas()">
+                    </div>
+                    <div class="corte-ventas-lista" id="corteVentasLista">
+                        <!-- Se carga dinámicamente -->
+                    </div>
+                </div>
+                
+                <!-- Panel de devoluciones -->
+                <div id="corteDevolucionesPanel" class="corte-panel">
+                    <div class="corte-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="corteDevolucionesSearch" placeholder="Buscar en devoluciones..." oninput="filterCorteDevoluciones()">
+                    </div>
+                    <div class="corte-devoluciones-lista" id="corteDevolucionesLista">
+                        <!-- Se carga dinámicamente -->
+                    </div>
+                </div>
+                
+                <!-- Historial de cortes anteriores -->
+                <div class="corte-historial">
+                    <h3><i class="fas fa-history"></i> Cortes anteriores</h3>
+                    <div class="historial-cortes-lista" id="historialCortesLista">
+                        <!-- Se carga dinámicamente -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notificación flotante -->
     <div id="notification" style="display:none;"></div>
 
     <!-- Supabase CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="script.js"></script>
+    <!-- Librerías para PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+
+<!-- Supabase CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="script.js"></script>
 </body>
 </html>

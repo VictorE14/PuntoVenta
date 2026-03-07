@@ -1,0 +1,7 @@
+git add .
+
+git commit -m "Actualización del proyecto PuntoVenta"
+
+git pull origin main
+
+git push origin main

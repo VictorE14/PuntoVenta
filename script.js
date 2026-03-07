@@ -269,9 +269,16 @@ function showNotification(message, type = 'info') {
         document.body.appendChild(notification);
     }
     
+    const iconos = {
+        success: 'fa-check-circle',
+        error: 'fa-exclamation-circle',
+        info: 'fa-info-circle',
+        warning: 'fa-exclamation-triangle'
+    };
+    
     notification.className = `notification ${type}`;
     notification.innerHTML = `
-        <i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i>
+        <i class="fas ${iconos[type] || 'fa-info-circle'}"></i>
         <span>${message}</span>
     `;
     
@@ -280,6 +287,16 @@ function showNotification(message, type = 'info') {
     setTimeout(() => {
         notification.style.display = 'none';
     }, 3000);
+}
+
+// ============================================================
+// FUNCIÓN CLEANOLDRETURNS (CORREGIDA)
+// ============================================================
+function cleanOldReturns() {
+    console.log('🧹 Limpiando devoluciones antiguas...');
+    // Como ahora usamos Supabase, esta función ya no es necesaria
+    // La mantenemos por compatibilidad pero no hace nada
+    return [];
 }
 
 // ============================================================
@@ -361,10 +378,19 @@ document.addEventListener('click', (e) => {
 });
 
 // ============================================================
-// AGREGAR PRODUCTO A LA VENTA (desde búsqueda)
+// AGREGAR PRODUCTO A LA VENTA (VERSIÓN CORREGIDA)
 // ============================================================
-async function addProductToSaleFromSearch(productId, codigo) {
+async function addProductToSale(productId) {
+    console.log('🔄 Intentando agregar producto con ID:', productId);
+    
     try {
+        // Verificar que el elemento total existe
+        if (!document.getElementById('total')) {
+            console.error('❌ Elemento #total no encontrado en el DOM');
+            return;
+        }
+        
+        // Buscar producto completo en Supabase
         const { data: product, error } = await supabaseClient
             .from('productos')
             .select('*')
@@ -372,29 +398,44 @@ async function addProductToSaleFromSearch(productId, codigo) {
             .eq('activo', true)
             .single();
         
-        if (error || !product) {
-            alert('Error al cargar el producto');
+        if (error) {
+            console.error('❌ Error al cargar producto:', error);
+            alert('Error al cargar el producto: ' + error.message);
             return;
         }
         
+        if (!product) {
+            console.error('❌ Producto no encontrado');
+            alert('Producto no encontrado');
+            return;
+        }
+        
+        console.log('✅ Producto encontrado:', product);
+        
+        // Verificar stock
         if (product.stock <= 0) {
-            alert('Producto sin stock disponible');
+            alert(`❌ Producto "${product.nombre}" sin stock disponible`);
             return;
         }
         
-        suggestionsDropdown.style.display = 'none';
-        searchInput.value = '';
-
+        // Verificar si ya existe en la venta actual
         const existingProductIndex = productosEnVenta.findIndex(p => p.id === product.id);
         
         if (existingProductIndex >= 0) {
+            // Ya existe, incrementar cantidad
             const newQty = productosEnVenta[existingProductIndex].cantidad + 1;
+            
+            // Verificar que no exceda el stock disponible
             if (newQty > product.stock) {
-                alert(`Solo hay ${product.stock} unidades disponibles`);
+                alert(`⚠️ Solo hay ${product.stock} unidades disponibles de "${product.nombre}"`);
                 return;
             }
+            
             productosEnVenta[existingProductIndex].cantidad = newQty;
+            console.log(`✅ Cantidad incrementada: ahora ${newQty} unidades`);
+            
         } else {
+            // Nuevo producto
             productosEnVenta.push({
                 id: product.id,
                 codigo: product.codigo,
@@ -402,31 +443,50 @@ async function addProductToSaleFromSearch(productId, codigo) {
                 marca: product.marca || 'Sin marca',
                 precio: parseFloat(product.precio),
                 cantidad: 1,
-                stock: product.stock
+                stock: product.stock,
+                stock_minimo: product.stock_minimo
             });
+            console.log('✅ Nuevo producto agregado a la venta');
         }
         
+        // Actualizar la tabla
         renderSalesTable();
         
+        // Cerrar el modal de inventario si está abierto
+        closeInventoryModal();
+        
+        // Mostrar notificación de éxito
+        showNotification(`✅ "${product.nombre}" agregado`, 'success');
+        
     } catch (error) {
-        console.error('Error inesperado:', error);
-        alert('Error al agregar producto');
+        console.error('❌ Error inesperado:', error);
+        alert('Error al agregar producto: ' + error.message);
     }
 }
 
-async function addProductToSale(productId) {
-    await addProductToSaleFromSearch(productId, null);
+// Función para buscar y agregar desde la búsqueda
+async function addProductToSaleFromSearch(productId, codigo) {
+    console.log('🔍 Agregando desde búsqueda:', { productId, codigo });
+    await addProductToSale(productId);
 }
 
 // ============================================================
-// RENDERIZAR TABLA DE VENTAS
+// RENDERIZAR TABLA DE VENTAS (CORREGIDA)
 // ============================================================
 function renderSalesTable() {
     const salesBody = document.getElementById('salesBody');
+    const salesTable = document.getElementById('salesTable');
+    const emptyState = document.getElementById('emptyState');
+    
+    if (!salesBody || !salesTable || !emptyState) {
+        console.error('❌ No se encontraron elementos del DOM');
+        return;
+    }
     
     if (productosEnVenta.length === 0) {
         salesBody.innerHTML = '';
-        updateEmptyState();
+        salesTable.style.display = 'none';
+        emptyState.style.display = 'flex';
         updateTotal();
         return;
     }
@@ -454,8 +514,9 @@ function renderSalesTable() {
         </tr>
     `).join('');
     
+    salesTable.style.display = 'table';
+    emptyState.style.display = 'none';
     updateTotal();
-    updateEmptyState();
 }
 
 // ============================================================
@@ -506,20 +567,32 @@ function clearAll() {
 }
 
 // ============================================================
-// ACTUALIZAR TOTAL
+// ACTUALIZAR TOTAL (CORREGIDA)
 // ============================================================
 function updateTotal() {
+    const totalElement = document.getElementById('total');
+    if (!totalElement) {
+        console.error('❌ No se encontró el elemento #total');
+        return;
+    }
+    
     const total = productosEnVenta.reduce((sum, p) => sum + (p.cantidad * p.precio), 0);
-    document.getElementById('total').textContent = `$${total.toFixed(2)}`;
+    totalElement.textContent = `$${total.toFixed(2)}`;
+    console.log('✅ Total actualizado:', `$${total.toFixed(2)}`);
 }
 
 // ============================================================
-// ESTADO VACÍO
+// ESTADO VACÍO (CORREGIDA)
 // ============================================================
 function updateEmptyState() {
+    const salesTable = document.getElementById('salesTable');
+    const emptyState = document.getElementById('emptyState');
+    
+    if (!salesTable || !emptyState) return;
+    
     const hasRows = productosEnVenta.length > 0;
-    document.getElementById('salesTable').style.display = hasRows ? 'table' : 'none';
-    document.getElementById('emptyState').style.display = hasRows ? 'none' : 'flex';
+    salesTable.style.display = hasRows ? 'table' : 'none';
+    emptyState.style.display = hasRows ? 'none' : 'flex';
 }
 
 // ============================================================
@@ -1131,51 +1204,65 @@ function showAdminMessage(text, type) {
     msg.className = 'admin-message ' + type;
     msg.style.display = 'block';
 }
+// ============================================================
+// DEVOLUCIONES POR DÍA - FUNCIONES
+// ============================================================
 
-// ============================================================
-// DEVOLUCIONES - VERSIÓN CON TU TABLA EXISTENTE
-// ============================================================
+let ventasDelDia = [];
+let devolucionesDelDia = [];
+let selectedReturns = new Map(); // Map para almacenar devoluciones seleccionadas
 
 // Mostrar modal de devolución
 function showReturnModal() {
-    updateReturnOptions();
+    // Establecer fecha actual por defecto
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('returnDate').value = today;
+    
+    // Resetear selecciones
+    selectedReturns.clear();
+    
+    // Cargar ventas del día
+    loadSalesByDate();
+    
     document.getElementById('returnModal').style.display = 'block';
 }
 
 function closeReturnModal() {
     document.getElementById('returnModal').style.display = 'none';
-    document.getElementById('returnSearchInput').value = '';
 }
 
-// Actualizar opciones de devolución
-async function updateReturnOptions() {
-    const tbody = document.getElementById('returnBody');
-    tbody.innerHTML = '<tr><td colspan="7" class="loading-row"><i class="fas fa-spinner fa-spin"></i> Cargando ventas...</td></tr>';
+// Cambiar entre tabs
+function switchReturnTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
+    
+    if (tab === 'ventas') {
+        document.querySelector('.tab-btn:first-child').classList.add('active');
+        document.getElementById('ventasDiaPanel').classList.add('active');
+    } else {
+        document.querySelector('.tab-btn:last-child').classList.add('active');
+        document.getElementById('historialPanel').classList.add('active');
+        loadHistorialDevoluciones();
+    }
+}
 
+// Cargar ventas por fecha seleccionada
+async function loadSalesByDate() {
+    const fecha = document.getElementById('returnDate').value;
+    if (!fecha) return;
+    
+    const startDate = `${fecha}T00:00:00`;
+    const endDate = `${fecha}T23:59:59`;
+    
     try {
-        // ===================================================
-        // 1. PRODUCTOS DE LA VENTA ACTUAL
-        // ===================================================
-        const ventaActualHTML = productosEnVenta.map(p => `
-            <tr data-codigo="${p.codigo}" data-source="actual" data-producto-id="${p.id}" data-venta-id="actual">
-                <td>${p.marca}</td>
-                <td>${p.nombre}</td>
-                <td>${p.codigo}</td>
-                <td>${p.cantidad}</td>
-                <td><input type="number" min="0" max="${p.cantidad}" value="0" onchange="updateReturnSubtotal(this, ${p.precio})"></td>
-                <td>$${p.precio.toFixed(2)}</td>
-                <td class="return-subtotal" id="sub_${p.codigo}">$0.00</td>
-            </tr>
-        `).join('');
-
-        // ===================================================
-        // 2. VENTAS ANTERIORES (últimos 7 días)
-        // ===================================================
+        // Cargar ventas del día
         const { data: ventas, error } = await supabaseClient
             .from('ventas')
             .select(`
                 id,
                 fecha,
+                total,
+                metodo_pago,
                 detalle_ventas (
                     id,
                     cantidad,
@@ -1188,175 +1275,371 @@ async function updateReturnOptions() {
                     )
                 )
             `)
-            .gte('fecha', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
+            .gte('fecha', startDate)
+            .lte('fecha', endDate)
             .order('fecha', { ascending: false });
-
-        if (error) throw error;
-
-        // Verificar productos ya devueltos
-        const { data: devolucionesExistentes } = await supabaseClient
-            .from('devoluciones')
-            .select('detalle_venta_id, cantidad');
-
-        const devueltosMap = new Map();
-        devolucionesExistentes?.forEach(d => {
-            devueltosMap.set(d.detalle_venta_id, (devueltosMap.get(d.detalle_venta_id) || 0) + d.cantidad);
-        });
-
-        // Generar HTML de ventas anteriores
-        const ventasAnterioresHTML = ventas?.map(venta => {
-            return venta.detalle_ventas.map(detalle => {
-                const yaDevuelto = devueltosMap.get(detalle.id) || 0;
-                const disponible = detalle.cantidad - yaDevuelto;
-                
-                if (disponible <= 0) return ''; // Ya se devolvió todo
-                
-                return `
-                    <tr data-venta-id="${venta.id}" 
-                        data-detalle-venta-id="${detalle.id}"
-                        data-producto-id="${detalle.producto_id}"
-                        data-codigo="${detalle.productos.codigo}"
-                        data-source="anterior"
-                        data-max="${disponible}">
-                        <td>${detalle.productos.marca || 'N/A'}</td>
-                        <td>${detalle.productos.nombre}</td>
-                        <td>${detalle.productos.codigo}</td>
-                        <td>${disponible}</td>
-                        <td><input type="number" min="0" max="${disponible}" value="0" onchange="updateReturnSubtotal(this, ${detalle.precio_unit})"></td>
-                        <td>$${detalle.precio_unit.toFixed(2)}</td>
-                        <td class="return-subtotal" id="sub_${detalle.productos.codigo}_${detalle.id}">$0.00</td>
-                    </tr>
-                `;
-            }).join('');
-        }).join('') || '';
-
-        tbody.innerHTML = ventaActualHTML + ventasAnterioresHTML;
         
-        if (tbody.children.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" class="empty-row">No hay productos disponibles para devolver</td></tr>';
-        }
-
+        if (error) throw error;
+        
+        ventasDelDia = ventas || [];
+        
+        // Cargar devoluciones del día
+        await loadReturnsByDate(fecha);
+        
+        // Actualizar resumen
+        updateDateSummary();
+        
+        // Renderizar ventas
+        renderVentasDia();
+        
     } catch (error) {
         console.error('Error cargando ventas:', error);
-        tbody.innerHTML = '<tr><td colspan="7" class="error-row">Error al cargar ventas</td></tr>';
+        showNotification('Error al cargar ventas', 'error');
     }
 }
 
-// Actualizar subtotal
-function updateReturnSubtotal(input, precio) {
-    const row = input.closest('tr');
-    const subtotalCell = row.querySelector('.return-subtotal');
-    const cantidad = parseInt(input.value) || 0;
-    subtotalCell.textContent = `$${(cantidad * precio).toFixed(2)}`;
+// Cargar devoluciones por fecha
+async function loadReturnsByDate(fecha) {
+    const startDate = `${fecha}T00:00:00`;
+    const endDate = `${fecha}T23:59:59`;
+    
+    try {
+        const { data: devoluciones, error } = await supabaseClient
+            .from('devoluciones')
+            .select(`
+                *,
+                ventas (fecha, total),
+                detalle_ventas (
+                    cantidad,
+                    precio_unit,
+                    productos (nombre, codigo, marca)
+                )
+            `)
+            .gte('fecha', startDate)
+            .lte('fecha', endDate)
+            .order('fecha', { ascending: false });
+        
+        if (error) throw error;
+        
+        devolucionesDelDia = devoluciones || [];
+        
+    } catch (error) {
+        console.error('Error cargando devoluciones:', error);
+    }
 }
 
-// Buscar en devoluciones
-function searchReturns() {
-    const query = document.getElementById('returnSearchInput').value.toLowerCase();
-    document.querySelectorAll('#returnBody tr').forEach(row => {
-        if (row.classList.contains('loading-row') || row.classList.contains('error-row') || row.classList.contains('empty-row')) return;
+// Actualizar resumen de fecha
+function updateDateSummary() {
+    const totalVentas = ventasDelDia.length;
+    const totalDevuelto = devolucionesDelDia.reduce((sum, d) => {
+        return sum + (d.cantidad * d.detalle_ventas?.precio_unit || 0);
+    }, 0);
+    
+    document.getElementById('totalVentasDia').textContent = totalVentas;
+    document.getElementById('totalDevueltoDia').textContent = `$${totalDevuelto.toFixed(2)}`;
+}
+
+// Renderizar ventas del día
+function renderVentasDia() {
+    const container = document.getElementById('ventasDiaContainer');
+    
+    if (ventasDelDia.length === 0) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-receipt"></i><p>No hay ventas en esta fecha</p></div>';
+        return;
+    }
+    
+    container.innerHTML = ventasDelDia.map(venta => {
+        // Verificar productos ya devueltos
+        const productosDevueltos = devolucionesDelDia
+            .filter(d => d.venta_id === venta.id)
+            .reduce((map, d) => {
+                map.set(d.detalle_venta_id, (map.get(d.detalle_venta_id) || 0) + d.cantidad);
+                return map;
+            }, new Map());
         
-        const codigo = (row.getAttribute('data-codigo') || '').toLowerCase();
-        const nombre = row.cells[1]?.textContent.toLowerCase() || '';
-        const marca = row.cells[0]?.textContent.toLowerCase() || '';
+        return `
+            <div class="venta-card" data-venta-id="${venta.id}">
+                <div class="venta-header" onclick="toggleVentaDetalle(this)">
+                    <div class="venta-header-left">
+                        <input type="checkbox" onchange="toggleVentaSeleccion(this, ${venta.id})" onclick="event.stopPropagation()">
+                        <div class="venta-info">
+                            <span><i class="fas fa-clock"></i> ${new Date(venta.fecha).toLocaleTimeString()}</span>
+                            <span><i class="fas fa-credit-card"></i> ${venta.metodo_pago}</span>
+                            <span class="venta-total">$${venta.total.toFixed(2)}</span>
+                        </div>
+                    </div>
+                    <div class="venta-header-right">
+                        <i class="fas fa-chevron-down"></i>
+                    </div>
+                </div>
+                <div class="venta-detalle">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Seleccionar</th>
+                                <th>Producto</th>
+                                <th>Código</th>
+                                <th>Disponible</th>
+                                <th>Cantidad</th>
+                                <th>Precio</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${venta.detalle_ventas.map(detalle => {
+                                const yaDevuelto = productosDevueltos.get(detalle.id) || 0;
+                                const disponible = detalle.cantidad - yaDevuelto;
+                                
+                                if (disponible <= 0) return '';
+                                
+                                return `
+                                    <tr data-detalle-id="${detalle.id}">
+                                        <td>
+                                            <div class="producto-checkbox">
+                                                <input type="checkbox" 
+                                                    onchange="toggleProductoSeleccion(this, '${venta.id}', '${detalle.id}')">
+                                            </div>
+                                        </td>
+                                        <td>${detalle.productos.nombre}</td>
+                                        <td>${detalle.productos.codigo}</td>
+                                        <td>${disponible}</td>
+                                        <td>
+                                            <input type="number" 
+                                                class="cantidad-input" 
+                                                min="1" 
+                                                max="${disponible}" 
+                                                value="1"
+                                                data-detalle-id="${detalle.id}"
+                                                onchange="updateSelectedQuantity('${venta.id}', '${detalle.id}', this.value)">
+                                        </td>
+                                        <td>$${detalle.precio_unit.toFixed(2)}</td>
+                                        <td class="subtotal-${detalle.id}">$${detalle.precio_unit.toFixed(2)}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    }).join('');
+    
+    updateSelectedCount();
+}
+
+// Toggle venta detalle
+function toggleVentaDetalle(header) {
+    const detalle = header.nextElementSibling;
+    detalle.classList.toggle('expanded');
+    const icon = header.querySelector('.fa-chevron-down, .fa-chevron-up');
+    if (icon) {
+        icon.classList.toggle('fa-chevron-down');
+        icon.classList.toggle('fa-chevron-up');
+    }
+}
+
+// Toggle selección de venta completa
+function toggleVentaSeleccion(checkbox, ventaId) {
+    const ventaCard = checkbox.closest('.venta-card');
+    const productoCheckboxes = ventaCard.querySelectorAll('.producto-checkbox input[type="checkbox"]');
+    
+    productoCheckboxes.forEach(cb => {
+        cb.checked = checkbox.checked;
+        if (checkbox.checked) {
+            const row = cb.closest('tr');
+            const detalleId = row.dataset.detalleId;
+            const cantidad = row.querySelector('.cantidad-input').value;
+            selectedReturns.set(`${ventaId}-${detalleId}`, {
+                ventaId,
+                detalleId,
+                cantidad: parseInt(cantidad)
+            });
+        } else {
+            const detalleId = row.dataset.detalleId;
+            selectedReturns.delete(`${ventaId}-${detalleId}`);
+        }
+    });
+    
+    updateSelectedCount();
+}
+
+// Toggle selección de producto individual
+function toggleProductoSeleccion(checkbox, ventaId, detalleId) {
+    const key = `${ventaId}-${detalleId}`;
+    
+    if (checkbox.checked) {
+        const row = checkbox.closest('tr');
+        const cantidad = row.querySelector('.cantidad-input').value;
+        selectedReturns.set(key, {
+            ventaId,
+            detalleId,
+            cantidad: parseInt(cantidad)
+        });
+    } else {
+        selectedReturns.delete(key);
         
-        row.style.display = (codigo.includes(query) || nombre.includes(query) || marca.includes(query)) ? '' : 'none';
+        // Desmarcar checkbox de venta si todos están desmarcados
+        const ventaCard = checkbox.closest('.venta-card');
+        const ventaCheckbox = ventaCard.querySelector('.venta-header-left > input[type="checkbox"]');
+        const otrosCheckboxes = ventaCard.querySelectorAll('.producto-checkbox input[type="checkbox"]:checked');
+        if (otrosCheckboxes.length === 0) {
+            ventaCheckbox.checked = false;
+        }
+    }
+    
+    updateSelectedCount();
+}
+
+// Actualizar cantidad seleccionada
+function updateSelectedQuantity(ventaId, detalleId, cantidad) {
+    const key = `${ventaId}-${detalleId}`;
+    if (selectedReturns.has(key)) {
+        const item = selectedReturns.get(key);
+        item.cantidad = parseInt(cantidad);
+        selectedReturns.set(key, item);
+        
+        // Actualizar subtotal
+        const row = document.querySelector(`tr[data-detalle-id="${detalleId}"]`);
+        const precio = parseFloat(row.cells[5].textContent.replace('$', ''));
+        row.querySelector(`.subtotal-${detalleId}`).textContent = `$${(precio * cantidad).toFixed(2)}`;
+    }
+}
+
+// Actualizar contador de seleccionados
+function updateSelectedCount() {
+    const count = selectedReturns.size;
+    document.getElementById('selectedCount').textContent = 
+        `${count} producto${count !== 1 ? 's' : ''} seleccionado${count !== 1 ? 's' : ''}`;
+}
+
+// Procesar devoluciones seleccionadas
+async function procesarDevolucionesSeleccionadas() {
+    if (selectedReturns.size === 0) {
+        alert('No hay productos seleccionados para devolver');
+        return;
+    }
+    
+    if (!confirm(`¿Procesar devolución de ${selectedReturns.size} producto(s)?`)) {
+        return;
+    }
+    
+    const devoluciones = [];
+    const fecha = new Date().toISOString();
+    
+    for (const [key, item] of selectedReturns) {
+        devoluciones.push({
+            venta_id: parseInt(item.ventaId),
+            detalle_venta_id: parseInt(item.detalleId),
+            cantidad: item.cantidad,
+            motivo: 'Devolución en mostrador',
+            fecha: fecha
+        });
+    }
+    
+    try {
+        const { error } = await supabaseClient
+            .from('devoluciones')
+            .insert(devoluciones);
+        
+        if (error) throw error;
+        
+        showNotification(`✅ ${devoluciones.length} devolución(es) procesada(s)`, 'success');
+        
+        // Recargar datos
+        selectedReturns.clear();
+        await loadSalesByDate();
+        updateSelectedCount();
+        
+    } catch (error) {
+        console.error('Error procesando devoluciones:', error);
+        showNotification('Error al procesar devoluciones', 'error');
+    }
+}
+
+// Cargar historial de devoluciones
+async function loadHistorialDevoluciones() {
+    const container = document.getElementById('historialContainer');
+    container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Cargando historial...</div>';
+    
+    try {
+        const { data: devoluciones, error } = await supabaseClient
+            .from('devoluciones')
+            .select(`
+                *,
+                ventas (fecha, total),
+                detalle_ventas (
+                    cantidad,
+                    precio_unit,
+                    productos (nombre, codigo, marca)
+                )
+            `)
+            .order('fecha', { ascending: false })
+            .limit(50);
+        
+        if (error) throw error;
+        
+        if (!devoluciones || devoluciones.length === 0) {
+            container.innerHTML = '<div class="empty-state"><i class="fas fa-history"></i><p>No hay devoluciones registradas</p></div>';
+            return;
+        }
+        
+        // Agrupar por fecha
+        const grouped = devoluciones.reduce((acc, dev) => {
+            const fecha = new Date(dev.fecha).toLocaleDateString();
+            if (!acc[fecha]) acc[fecha] = [];
+            acc[fecha].push(dev);
+            return acc;
+        }, {});
+        
+        container.innerHTML = Object.entries(grouped).map(([fecha, items]) => `
+            <div class="historial-group">
+                <h3 class="historial-group-title">${fecha}</h3>
+                ${items.map(dev => `
+                    <div class="historial-card">
+                        <div class="historial-header">
+                            <span class="historial-fecha">
+                                <i class="fas fa-clock"></i> ${new Date(dev.fecha).toLocaleTimeString()}
+                            </span>
+                            <span class="historial-total">
+                                Venta: $${dev.ventas?.total?.toFixed(2) || '0.00'}
+                            </span>
+                        </div>
+                        <div class="historial-producto">
+                            <span>${dev.detalle_ventas?.productos?.nombre || 'Producto'}</span>
+                            <span>Cantidad: ${dev.cantidad} x $${dev.detalle_ventas?.precio_unit?.toFixed(2) || '0.00'}</span>
+                        </div>
+                        ${dev.motivo ? `<div class="historial-motivo">Motivo: ${dev.motivo}</div>` : ''}
+                    </div>
+                `).join('')}
+            </div>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Error cargando historial:', error);
+        container.innerHTML = '<div class="error-state"><i class="fas fa-exclamation-circle"></i><p>Error al cargar historial</p></div>';
+    }
+}
+
+// Filtrar ventas del día
+function filterVentasDia() {
+    const query = document.getElementById('ventasDiaSearch').value.toLowerCase();
+    const cards = document.querySelectorAll('.venta-card');
+    
+    cards.forEach(card => {
+        const texto = card.textContent.toLowerCase();
+        card.style.display = texto.includes(query) ? '' : 'none';
     });
 }
 
-// Procesar devolución
-async function processReturn() {
-    const rows = document.querySelectorAll('#returnBody tr');
-    let totalDevuelto = 0;
-    let devoluciones = [];
-
-    // Filtrar filas válidas
-    const filasValidas = Array.from(rows).filter(row => 
-        !row.classList.contains('loading-row') && 
-        !row.classList.contains('error-row') &&
-        !row.classList.contains('empty-row') &&
-        row.cells.length > 1
-    );
-
-    for (const row of filasValidas) {
-        const input = row.querySelector('input[type="number"]');
-        if (!input) continue;
-        
-        const cantidad = parseInt(input.value) || 0;
-        if (cantidad <= 0) continue;
-
-        const ventaId = row.getAttribute('data-venta-id');
-        const detalleVentaId = row.getAttribute('data-detalle-venta-id');
-        const productoId = row.getAttribute('data-producto-id');
-        const source = row.getAttribute('data-source');
-        const max = parseInt(row.getAttribute('data-max') || row.cells[3]?.textContent || 0);
-
-        // Validar cantidad
-        if (cantidad > max) {
-            alert(`Error: No puedes devolver más de ${max} unidades de este producto`);
-            return;
-        }
-
-        if (source === 'actual') {
-            // Devolución de la venta actual
-            const productIndex = productosEnVenta.findIndex(p => p.id == productoId);
-            if (productIndex >= 0) {
-                productosEnVenta[productIndex].cantidad -= cantidad;
-                if (productosEnVenta[productIndex].cantidad === 0) {
-                    productosEnVenta.splice(productIndex, 1);
-                }
-            }
-            
-            // Nota: Para venta actual no hay detalle_venta_id aún (no está guardada)
-            showNotification('Devolución de venta actual procesada', 'info');
-            
-        } else if (source === 'anterior' && detalleVentaId) {
-            // Devolución de venta anterior - guardar en Supabase
-            devoluciones.push({
-                venta_id: ventaId,
-                detalle_venta_id: detalleVentaId,
-                cantidad: cantidad,
-                motivo: 'Devolución de cliente',
-                fecha: new Date().toISOString()
-            });
-        }
-
-        totalDevuelto += cantidad;
-    }
-
-    if (devoluciones.length === 0 && totalDevuelto === 0) {
-        alert('No hay cantidades a devolver');
-        return;
-    }
-
-    // Guardar devoluciones en Supabase
-    if (devoluciones.length > 0) {
-        try {
-            const { error } = await supabaseClient
-                .from('devoluciones')
-                .insert(devoluciones);
-
-            if (error) throw error;
-            
-        } catch (error) {
-            console.error('Error guardando devolución:', error);
-            alert('Error al procesar la devolución: ' + error.message);
-            return;
-        }
-    }
-
-    // Actualizar tabla de ventas
-    renderSalesTable();
+// Filtrar historial
+function filterHistorial() {
+    const query = document.getElementById('historialSearch').value.toLowerCase();
+    const cards = document.querySelectorAll('.historial-card');
     
-    // Mostrar resumen
-    let mensaje = `✅ Devolución procesada correctamente.\n`;
-    mensaje += `Total devuelto: ${totalDevuelto} artículo(s).\n`;
-    if (devoluciones.length > 0) {
-        mensaje += `Devoluciones guardadas en base de datos: ${devoluciones.length}`;
-    }
-    alert(mensaje);
-    
-    closeReturnModal();
+    cards.forEach(card => {
+        const texto = card.textContent.toLowerCase();
+        card.style.display = texto.includes(query) ? '' : 'none';
+    });
 }
 
 // ============================================================
@@ -1389,7 +1672,639 @@ async function verHistorialDevoluciones() {
     }
 }
 
+// ============================================================
+// CORTE DE CAJA - FUNCIONES
+// ============================================================
 
+let currentCorteData = {
+    ventas: [],
+    devoluciones: []
+};
+
+// Mostrar modal de corte
+function showCorteModal() {
+    // Establecer fecha actual
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('corteDate').value = today;
+    
+    document.getElementById('corteModal').style.display = 'block';
+    loadCorteData();
+    loadHistorialCortes();
+}
+
+function closeCorteModal() {
+    document.getElementById('corteModal').style.display = 'none';
+}
+
+// Cargar datos del corte
+async function loadCorteData() {
+    const fecha = document.getElementById('corteDate').value;
+    if (!fecha) return;
+    
+    const startDate = `${fecha}T00:00:00`;
+    const endDate = `${fecha}T23:59:59`;
+    
+    try {
+        // Cargar ventas del día
+        const { data: ventas, error: ventasError } = await supabaseClient
+            .from('ventas')
+            .select(`
+                *,
+                detalle_ventas (
+                    id,
+                    cantidad,
+                    precio_unit,
+                    producto_id,
+                    productos (
+                        nombre,
+                        codigo,
+                        marca
+                    )
+                )
+            `)
+            .gte('fecha', startDate)
+            .lte('fecha', endDate)
+            .order('fecha', { ascending: false });
+        
+        if (ventasError) throw ventasError;
+        
+        // Cargar devoluciones del día
+        const { data: devoluciones, error: devError } = await supabaseClient
+            .from('devoluciones')
+            .select(`
+                *,
+                ventas (fecha, total, metodo_pago),
+                detalle_ventas (
+                    cantidad,
+                    precio_unit,
+                    productos (nombre, codigo, marca)
+                )
+            `)
+            .gte('fecha', startDate)
+            .lte('fecha', endDate)
+            .order('fecha', { ascending: false });
+        
+        if (devError) throw devError;
+        
+        currentCorteData = {
+            ventas: ventas || [],
+            devoluciones: devoluciones || []
+        };
+        
+        updateCorteResumen();
+        renderCorteVentas();
+        renderCorteDevoluciones();
+        
+    } catch (error) {
+        console.error('Error cargando corte:', error);
+        showNotification('Error al cargar datos del corte', 'error');
+    }
+}
+
+// Actualizar resumen del corte
+function updateCorteResumen() {
+    const ventas = currentCorteData.ventas;
+    const devoluciones = currentCorteData.devoluciones;
+    
+    // Totales
+    const totalVentas = ventas.reduce((sum, v) => sum + parseFloat(v.total || 0), 0);
+    const totalEfectivo = ventas
+        .filter(v => v.metodo_pago === 'efectivo')
+        .reduce((sum, v) => sum + parseFloat(v.total || 0), 0);
+    const totalTarjeta = ventas
+        .filter(v => v.metodo_pago === 'tarjeta')
+        .reduce((sum, v) => sum + parseFloat(v.total || 0), 0);
+    
+    const totalDevoluciones = devoluciones.reduce((sum, d) => {
+        return sum + (d.cantidad * (d.detalle_ventas?.precio_unit || 0));
+    }, 0);
+    
+    // Estadísticas
+    const numVentas = ventas.length;
+    const ticketPromedio = numVentas > 0 ? totalVentas / numVentas : 0;
+    const productosVendidos = ventas.reduce((sum, v) => {
+        return sum + (v.detalle_ventas?.reduce((s, d) => s + d.cantidad, 0) || 0);
+    }, 0);
+    
+    // Actualizar DOM
+    document.getElementById('corteTotalVentas').textContent = `$${totalVentas.toFixed(2)}`;
+    document.getElementById('corteTotalEfectivo').textContent = `$${totalEfectivo.toFixed(2)}`;
+    document.getElementById('corteTotalTarjeta').textContent = `$${totalTarjeta.toFixed(2)}`;
+    document.getElementById('corteTotalDevoluciones').textContent = `$${totalDevoluciones.toFixed(2)}`;
+    document.getElementById('corteNumVentas').textContent = numVentas;
+    document.getElementById('corteTicketPromedio').textContent = `$${ticketPromedio.toFixed(2)}`;
+    document.getElementById('corteProductosVendidos').textContent = productosVendidos;
+}
+
+// Renderizar lista de ventas
+function renderCorteVentas() {
+    const container = document.getElementById('corteVentasLista');
+    
+    if (currentCorteData.ventas.length === 0) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-receipt"></i><p>No hay ventas en esta fecha</p></div>';
+        return;
+    }
+    
+    container.innerHTML = currentCorteData.ventas.map(venta => `
+        <div class="corte-venta-item" data-venta-id="${venta.id}">
+            <div class="venta-info">
+                <span><i class="fas fa-clock"></i> ${new Date(venta.fecha).toLocaleTimeString()}</span>
+                <span><i class="fas fa-credit-card"></i> ${venta.metodo_pago}</span>
+                <span><i class="fas fa-cube"></i> ${venta.detalle_ventas?.length || 0} productos</span>
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span style="font-weight: 700; color: #00695c;">$${venta.total.toFixed(2)}</span>
+                <button class="venta-detalle-btn" onclick="toggleVentaDetalleCorte('${venta.id}')">
+                    <i class="fas fa-chevron-down"></i>
+                </button>
+            </div>
+            <div class="venta-detalle-expandido" id="detalle-${venta.id}">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Código</th>
+                            <th>Cantidad</th>
+                            <th>Precio</th>
+                            <th>Subtotal</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${venta.detalle_ventas.map(d => `
+                            <tr>
+                                <td>${d.productos?.nombre || 'N/A'}</td>
+                                <td>${d.productos?.codigo || 'N/A'}</td>
+                                <td>${d.cantidad}</td>
+                                <td>$${d.precio_unit.toFixed(2)}</td>
+                                <td>$${(d.cantidad * d.precio_unit).toFixed(2)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Toggle detalle de venta en corte
+function toggleVentaDetalleCorte(ventaId) {
+    const detalle = document.getElementById(`detalle-${ventaId}`);
+    detalle.classList.toggle('active');
+    const btn = document.querySelector(`[data-venta-id="${ventaId}"] .venta-detalle-btn i`);
+    if (btn) {
+        btn.classList.toggle('fa-chevron-down');
+        btn.classList.toggle('fa-chevron-up');
+    }
+}
+
+// Renderizar lista de devoluciones
+function renderCorteDevoluciones() {
+    const container = document.getElementById('corteDevolucionesLista');
+    
+    if (currentCorteData.devoluciones.length === 0) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-undo"></i><p>No hay devoluciones en esta fecha</p></div>';
+        return;
+    }
+    
+    container.innerHTML = currentCorteData.devoluciones.map(dev => `
+        <div class="corte-venta-item">
+            <div class="venta-info">
+                <span><i class="fas fa-clock"></i> ${new Date(dev.fecha).toLocaleTimeString()}</span>
+                <span><i class="fas fa-tag"></i> ${dev.detalle_ventas?.productos?.nombre || 'Producto'}</span>
+                <span><i class="fas fa-cube"></i> Cant: ${dev.cantidad}</span>
+            </div>
+            <div>
+                <span style="font-weight: 700; color: #c62828;">
+                    -$${(dev.cantidad * (dev.detalle_ventas?.precio_unit || 0)).toFixed(2)}
+                </span>
+            </div>
+        </div>
+    `).join('');
+}
+
+// Cambiar entre tabs
+function switchCorteTab(tab) {
+    document.querySelectorAll('.corte-tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.corte-panel').forEach(panel => panel.classList.remove('active'));
+    
+    if (tab === 'ventas') {
+        document.querySelector('.corte-tab-btn:first-child').classList.add('active');
+        document.getElementById('corteVentasPanel').classList.add('active');
+    } else {
+        document.querySelector('.corte-tab-btn:last-child').classList.add('active');
+        document.getElementById('corteDevolucionesPanel').classList.add('active');
+    }
+}
+
+// Filtrar ventas en corte
+function filterCorteVentas() {
+    const query = document.getElementById('corteVentasSearch').value.toLowerCase();
+    const items = document.querySelectorAll('#corteVentasLista .corte-venta-item');
+    
+    items.forEach(item => {
+        const texto = item.textContent.toLowerCase();
+        item.style.display = texto.includes(query) ? '' : 'none';
+    });
+}
+
+// Filtrar devoluciones en corte
+function filterCorteDevoluciones() {
+    const query = document.getElementById('corteDevolucionesSearch').value.toLowerCase();
+    const items = document.querySelectorAll('#corteDevolucionesLista .corte-venta-item');
+    
+    items.forEach(item => {
+        const texto = item.textContent.toLowerCase();
+        item.style.display = texto.includes(query) ? '' : 'none';
+    });
+}
+
+// Guardar corte en historial
+async function guardarCorte() {
+    const fecha = document.getElementById('corteDate').value;
+    
+    // Verificar si ya existe corte para esta fecha
+    const { data: existente } = await supabaseClient
+        .from('cierres_dia')
+        .select('id')
+        .eq('fecha', fecha)
+        .single();
+    
+    if (existente) {
+        if (!confirm('Ya existe un corte para esta fecha. ¿Sobrescribir?')) {
+            return;
+        }
+    }
+    
+    const ventas = currentCorteData.ventas;
+    const devoluciones = currentCorteData.devoluciones;
+    
+    const totalVentas = ventas.reduce((sum, v) => sum + parseFloat(v.total || 0), 0);
+    const totalEfectivo = ventas
+        .filter(v => v.metodo_pago === 'efectivo')
+        .reduce((sum, v) => sum + parseFloat(v.total || 0), 0);
+    const totalTarjeta = ventas
+        .filter(v => v.metodo_pago === 'tarjeta')
+        .reduce((sum, v) => sum + parseFloat(v.total || 0), 0);
+    const totalDevoluciones = devoluciones.reduce((sum, d) => {
+        return sum + (d.cantidad * (d.detalle_ventas?.precio_unit || 0));
+    }, 0);
+    
+    const corteData = {
+        fecha,
+        total_ventas: totalVentas,
+        total_efectivo: totalEfectivo,
+        total_tarjeta: totalTarjeta,
+        num_tickets: ventas.length,
+        total_devoluciones: totalDevoluciones,
+        cerrado_por: currentAdminUser?.nombre || 'Admin',
+        fecha_cierre: new Date().toISOString()
+    };
+    
+    try {
+        if (existente) {
+            // Actualizar
+            await supabaseClient
+                .from('cierres_dia')
+                .update(corteData)
+                .eq('fecha', fecha);
+        } else {
+            // Insertar
+            await supabaseClient
+                .from('cierres_dia')
+                .insert([corteData]);
+        }
+        
+        showNotification('✅ Corte guardado correctamente', 'success');
+        loadHistorialCortes();
+        
+    } catch (error) {
+        console.error('Error guardando corte:', error);
+        showNotification('Error al guardar corte', 'error');
+    }
+}
+
+// Cargar historial de cortes
+async function loadHistorialCortes() {
+    const container = document.getElementById('historialCortesLista');
+    
+    try {
+        const { data: cortes, error } = await supabaseClient
+            .from('cierres_dia')
+            .select('*')
+            .order('fecha', { ascending: false })
+            .limit(10);
+        
+        if (error) throw error;
+        
+        if (!cortes || cortes.length === 0) {
+            container.innerHTML = '<div class="empty-state"><i class="fas fa-history"></i><p>No hay cortes guardados</p></div>';
+            return;
+        }
+        
+        container.innerHTML = cortes.map(corte => `
+            <div class="historial-corte-item" onclick="loadCorteFecha('${corte.fecha}')">
+                <span class="historial-corte-fecha">
+                    <i class="fas fa-calendar-alt"></i> ${new Date(corte.fecha).toLocaleDateString()}
+                </span>
+                <div class="historial-corte-totales">
+                    <span><i class="fas fa-shopping-cart"></i> $${corte.total_ventas.toFixed(2)}</span>
+                    <span><i class="fas fa-undo"></i> $${corte.total_devoluciones.toFixed(2)}</span>
+                    <span><i class="fas fa-ticket-alt"></i> ${corte.num_tickets} tickets</span>
+                </div>
+            </div>
+        `).join('');
+        
+    } catch (error) {
+        console.error('Error cargando historial:', error);
+    }
+}
+
+// Cargar corte de fecha específica desde historial
+function loadCorteFecha(fecha) {
+    document.getElementById('corteDate').value = fecha;
+    loadCorteData();
+}
+
+// ============================================================
+// EXPORTAR CORTE A PDF (VERSIÓN COMPLETA Y CORREGIDA)
+// ============================================================
+async function exportCortePDF() {
+    const fecha = document.getElementById('corteDate').value;
+    if (!fecha) {
+        showNotification('Selecciona una fecha', 'warning');
+        return;
+    }
+    
+    showNotification('Generando PDF...', 'info');
+    
+    try {
+        // Verificar que jsPDF está disponible
+        if (typeof window.jspdf === 'undefined') {
+            throw new Error('Librería jsPDF no cargada');
+        }
+        
+        // Crear nuevo documento PDF
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Configurar colores corporativos
+        const primaryColor = [0, 105, 92]; // #00695c
+        const secondaryColor = [0, 137, 123]; // #00897b
+        const dangerColor = [198, 40, 40]; // #c62828
+        
+        // ===================================================
+        // ENCABEZADO
+        // ===================================================
+        
+        // Título principal
+        doc.setFontSize(24);
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.text('Ferretería Alex', 105, 20, { align: 'center' });
+        
+        // Subtítulo
+        doc.setFontSize(16);
+        doc.setTextColor(100);
+        doc.text('Corte de Caja', 105, 30, { align: 'center' });
+        
+        // Fecha formateada
+        const fechaFormateada = new Date(fecha).toLocaleDateString('es-MX', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+        doc.setFontSize(12);
+        doc.setTextColor(80);
+        doc.text(fechaFormateada.charAt(0).toUpperCase() + fechaFormateada.slice(1), 105, 38, { align: 'center' });
+        
+        // Línea decorativa
+        doc.setDrawColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
+        doc.setLineWidth(0.75);
+        doc.line(20, 45, 190, 45);
+        
+        // ===================================================
+        // RESUMEN - CUADROS DE TOTALES
+        // ===================================================
+        
+        // Obtener valores
+        const totalVentas = document.getElementById('corteTotalVentas').textContent;
+        const totalEfectivo = document.getElementById('corteTotalEfectivo').textContent;
+        const totalTarjeta = document.getElementById('corteTotalTarjeta').textContent;
+        const totalDevoluciones = document.getElementById('corteTotalDevoluciones').textContent;
+        const numVentas = document.getElementById('corteNumVentas').textContent;
+        const ticketPromedio = document.getElementById('corteTicketPromedio').textContent;
+        const productosVendidos = document.getElementById('corteProductosVendidos').textContent;
+        
+        // Título de sección
+        doc.setFontSize(14);
+        doc.setTextColor(0);
+        doc.text('Resumen del Día', 20, 55);
+        
+        // Crear cuadros de resumen
+        const startY = 62;
+        const boxWidth = 82;
+        const boxHeight = 25;
+        
+        // Fila 1: Total Ventas y Efectivo
+        doc.setFillColor(240, 248, 255); // Azul muy claro
+        doc.roundedRect(20, startY, boxWidth, boxHeight, 3, 3, 'F');
+        doc.setFontSize(10);
+        doc.setTextColor(80);
+        doc.text('TOTAL VENTAS', 25, startY + 7);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
+        doc.text(totalVentas, 25, startY + 20);
+        
+        doc.setFillColor(232, 245, 233); // Verde muy claro
+        doc.roundedRect(108, startY, boxWidth, boxHeight, 3, 3, 'F');
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80);
+        doc.text('EFECTIVO', 113, startY + 7);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(46, 125, 50); // Verde oscuro
+        doc.text(totalEfectivo, 113, startY + 20);
+        
+        // Fila 2: Tarjeta y Devoluciones
+        doc.setFillColor(255, 243, 224); // Naranja muy claro
+        doc.roundedRect(20, startY + 30, boxWidth, boxHeight, 3, 3, 'F');
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80);
+        doc.text('TARJETA', 25, startY + 37);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(230, 81, 0); // Naranja
+        doc.text(totalTarjeta, 25, startY + 50);
+        
+        doc.setFillColor(255, 235, 238); // Rojo muy claro
+        doc.roundedRect(108, startY + 30, boxWidth, boxHeight, 3, 3, 'F');
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(80);
+        doc.text('DEVOLUCIONES', 113, startY + 37);
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(dangerColor[0], dangerColor[1], dangerColor[2]);
+        doc.text(totalDevoluciones, 113, startY + 50);
+        
+        // ===================================================
+        // ESTADÍSTICAS
+        // ===================================================
+        
+        doc.setFontSize(14);
+        doc.setTextColor(0);
+        doc.text('Estadísticas', 20, 130);
+        
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(60);
+        
+        const statsY = 140;
+        doc.text(`• Número de Ventas: ${numVentas}`, 25, statsY);
+        doc.text(`• Ticket Promedio: ${ticketPromedio}`, 25, statsY + 8);
+        doc.text(`• Productos Vendidos: ${productosVendidos}`, 25, statsY + 16);
+        
+        // ===================================================
+        // TABLA DE VENTAS
+        // ===================================================
+        
+        let yPos = 165;
+        
+        doc.setFontSize(14);
+        doc.setTextColor(0);
+        doc.text('Ventas del Día', 20, yPos);
+        yPos += 5;
+        
+        const ventas = currentCorteData.ventas || [];
+        
+        if (ventas.length > 0) {
+            const ventasData = ventas.map(venta => [
+                new Date(venta.fecha).toLocaleTimeString(),
+                venta.metodo_pago === 'efectivo' ? 'Efectivo' : 'Tarjeta',
+                venta.detalle_ventas?.length || 0,
+                `$${venta.total.toFixed(2)}`
+            ]);
+            
+            doc.autoTable({
+                startY: yPos,
+                head: [['Hora', 'Método', 'Productos', 'Total']],
+                body: ventasData,
+                theme: 'striped',
+                headStyles: { 
+                    fillColor: primaryColor,
+                    textColor: 255,
+                    fontSize: 10,
+                    halign: 'center'
+                },
+                bodyStyles: { fontSize: 9 },
+                columnStyles: {
+                    0: { cellWidth: 40 },
+                    1: { cellWidth: 35 },
+                    2: { cellWidth: 30, halign: 'center' },
+                    3: { cellWidth: 35, halign: 'right' }
+                },
+                margin: { left: 20, right: 20 }
+            });
+            
+            yPos = doc.lastAutoTable.finalY + 10;
+        } else {
+            doc.setFontSize(11);
+            doc.setTextColor(150);
+            doc.text('No hay ventas en esta fecha', 20, yPos + 5);
+            yPos += 15;
+        }
+        
+        // ===================================================
+        // TABLA DE DEVOLUCIONES
+        // ===================================================
+        
+        // Verificar si necesitamos una nueva página
+        if (yPos > 250) {
+            doc.addPage();
+            yPos = 20;
+        }
+        
+        doc.setFontSize(14);
+        doc.setTextColor(0);
+        doc.text('Devoluciones del Día', 20, yPos);
+        yPos += 5;
+        
+        const devoluciones = currentCorteData.devoluciones || [];
+        
+        if (devoluciones.length > 0) {
+            const devolucionesData = devoluciones.map(dev => [
+                new Date(dev.fecha).toLocaleTimeString(),
+                dev.detalle_ventas?.productos?.nombre || 'Producto',
+                dev.cantidad.toString(),
+                `$${(dev.cantidad * (dev.detalle_ventas?.precio_unit || 0)).toFixed(2)}`
+            ]);
+            
+            doc.autoTable({
+                startY: yPos,
+                head: [['Hora', 'Producto', 'Cant.', 'Total']],
+                body: devolucionesData,
+                theme: 'striped',
+                headStyles: { 
+                    fillColor: dangerColor,
+                    textColor: 255,
+                    fontSize: 10,
+                    halign: 'center'
+                },
+                bodyStyles: { fontSize: 9 },
+                columnStyles: {
+                    0: { cellWidth: 40 },
+                    1: { cellWidth: 70 },
+                    2: { cellWidth: 20, halign: 'center' },
+                    3: { cellWidth: 35, halign: 'right' }
+                },
+                margin: { left: 20, right: 20 }
+            });
+            
+            yPos = doc.lastAutoTable.finalY + 10;
+        } else {
+            doc.setFontSize(11);
+            doc.setTextColor(150);
+            doc.text('No hay devoluciones en esta fecha', 20, yPos + 5);
+            yPos += 15;
+        }
+        
+        // ===================================================
+        // PIE DE PÁGINA
+        // ===================================================
+        
+        // Línea final
+        doc.setDrawColor(200);
+        doc.setLineWidth(0.5);
+        doc.line(20, 280, 190, 280);
+        
+        doc.setFontSize(8);
+        doc.setTextColor(150);
+        doc.text('Ferretería Alex - Punto de Venta', 105, 287, { align: 'center' });
+        doc.text(`Reporte generado: ${new Date().toLocaleString()}`, 105, 292, { align: 'center' });
+        
+        // ===================================================
+        // GUARDAR PDF
+        // ===================================================
+        
+        // Nombre del archivo
+        const nombreArchivo = `Corte_Caja_${fecha.replace(/-/g, '_')}.pdf`;
+        doc.save(nombreArchivo);
+        
+        showNotification('✅ PDF generado correctamente', 'success');
+        
+    } catch (error) {
+        console.error('Error generando PDF:', error);
+        
+        if (error.message.includes('jsPDF no cargada')) {
+            showNotification('Error: Librería PDF no cargada. Recarga la página.', 'error');
+        } else {
+            showNotification('Error al generar PDF: ' + error.message, 'error');
+        }
+    }
+}
 
 // ============================================================
 // CIERRE DE MODALES
@@ -1402,21 +2317,45 @@ window.addEventListener('click', (e) => {
         closeAdminModal();
     }
     if (e.target === document.getElementById('loginModal')) closeLoginModal();
+    if (e.target === document.getElementById('corteModal')) closeCorteModal();
 });
 
 // ============================================================
-// INICIALIZACIÓN
+// INICIALIZACIÓN (CORREGIDA)
 // ============================================================
 window.onload = async function() {
+    console.log('🚀 Inicializando aplicación...');
+    
+    // Verificar que los elementos del DOM existen
+    const elementos = ['total', 'salesBody', 'salesTable', 'emptyState'];
+    elementos.forEach(id => {
+        if (!document.getElementById(id)) {
+            console.error(`❌ Elemento #${id} no encontrado en el DOM`);
+        } else {
+            console.log(`✅ Elemento #${id} encontrado`);
+        }
+    });
+    
     updateDateTime();
     await verificarYCrearCategorias();
     await loadCategories();
+    
+    // Inicializar productosEnVenta como array vacío
+    productosEnVenta = [];
+    
+    // Actualizar UI
+    renderSalesTable();
     updateEmptyState();
+    
+    // Limpiar devoluciones antiguas (ahora existe la función)
     cleanOldReturns();
     
     try {
         await supabaseClient.rpc('limpiar_ventas_antiguas');
+        console.log('✅ Función limpiar_ventas_antiguas ejecutada');
     } catch (error) {
         console.log('Función limpiar_ventas_antiguas no disponible aún');
     }
+    
+    console.log('✅ Aplicación inicializada correctamente');
 };
