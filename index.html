@@ -6,7 +6,6 @@
     <title>Ferretería Alex - Punto de Venta</title>
     <link rel="stylesheet" href="styles.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
 </head>
 <body>
 
@@ -28,7 +27,7 @@
                 <input type="text" id="time" readonly>
             </div>
         </div>
-        <!-- BOTÓN ADMIN - Llama a showLoginModal() -->
+        <!-- BOTÓN ADMIN -->
         <button class="btn btn-primary btn-admin" onclick="showLoginModal()">
             <i class="fas fa-cogs"></i> Admin Inventario
         </button>
@@ -271,13 +270,18 @@
     </div>
 
     <!-- =================================================== -->
-    <!-- MODAL ADMIN INVENTARIO -->
+    <!-- MODAL ADMIN INVENTARIO (ACTUALIZADO) -->
     <!-- =================================================== -->
     <div id="adminModal" class="modal">
         <div class="modal-content modal-large">
             <div class="modal-header">
                 <h2 id="adminModalTitle"><i class="fas fa-boxes"></i> Administrar Inventario</h2>
                 <div style="display: flex; gap: 10px; align-items: center;">
+                    <!-- BOTÓN DE REPORTE DE STOCK MÍNIMO -->
+                    <button class="btn btn-warning btn-sm" onclick="showReporteStockModal()" title="Reporte de stock mínimo">
+                        <i class="fas fa-exclamation-triangle"></i> Stock Mínimo
+                    </button>
+                    
                     <!-- Badge de usuario -->
                     <span class="admin-user-badge" id="adminUserBadge">
                         <i class="fas fa-user-shield"></i> 
@@ -317,7 +321,7 @@
                 <div class="admin-product-grid" id="adminProductsGrid"></div>
             </div>
             
-            <!-- VISTA PARA AGREGAR NUEVO PRODUCTO -->
+            <!-- VISTA PARA AGREGAR NUEVO PRODUCTO (CON PRECIO PROVEEDOR) -->
             <div id="adminAddProductView" style="display:none;">
                 <div class="admin-view-header">
                     <button class="btn btn-secondary btn-back" onclick="showAdminProductView(adminCurrentCategory)">
@@ -327,39 +331,126 @@
                 </div>
                 <div class="form-container">
                     <form id="adminAddProductForm">
-                        <div class="form-group">
-                            <label for="adminProdCode">Código (único) *</label>
-                            <input type="text" id="adminProdCode" required placeholder="Ej: 016">
+                        <div class="form-row">
+                            <div class="form-group half">
+                                <label for="adminProdCode">Código (único) *</label>
+                                <input type="text" id="adminProdCode" required placeholder="Ej: 016">
+                            </div>
+                            <div class="form-group half">
+                                <label for="adminProdCategory">Categoría *</label>
+                                <select id="adminProdCategory" required></select>
+                            </div>
                         </div>
+                        
                         <div class="form-group">
                             <label for="adminProdName">Nombre del producto *</label>
                             <input type="text" id="adminProdName" required placeholder="Ej: Sierra circular">
                         </div>
+                        
                         <div class="form-group">
                             <label for="adminProdBrand">Marca</label>
                             <input type="text" id="adminProdBrand" placeholder="Ej: Truper">
                         </div>
-                        <div class="form-group">
-                            <label for="adminProdCategory">Categoría *</label>
-                            <select id="adminProdCategory" required></select>
+                        
+                        <div class="form-row">
+                            <div class="form-group half">
+                                <label for="adminProdPrice">Precio Público (MXN) *</label>
+                                <input type="number" id="adminProdPrice" min="0" step="0.01" required placeholder="0.00">
+                            </div>
+                            <div class="form-group half">
+                                <label for="adminProdPriceProveedor">Precio Proveedor (MXN) *</label>
+                                <input type="number" id="adminProdPriceProveedor" min="0" step="0.01" required placeholder="0.00" value="0">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label for="adminProdPrice">Precio (MXN) *</label>
-                            <input type="number" id="adminProdPrice" min="0" step="0.01" required placeholder="0.00">
+                        
+                        <div class="form-row">
+                            <div class="form-group half">
+                                <label for="adminProdStock">Stock Inicial *</label>
+                                <input type="number" id="adminProdStock" min="0" required value="0">
+                            </div>
+                            <div class="form-group half">
+                                <label for="adminProdMinStock">Stock Mínimo *</label>
+                                <input type="number" id="adminProdMinStock" min="1" required value="1">
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label for="adminProdStock">Stock Inicial *</label>
-                            <input type="number" id="adminProdStock" min="0" required value="0">
-                        </div>
-                        <div class="form-group">
-                            <label for="adminProdMinStock">Stock Mínimo</label>
-                            <input type="number" id="adminProdMinStock" min="1" value="1">
-                        </div>
-                        <button type="submit" class="btn btn-success">
+                        
+                        <button type="submit" class="btn btn-success btn-block">
                             <i class="fas fa-plus"></i> Agregar Producto
                         </button>
                     </form>
                     <div id="adminMessage" class="admin-message"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- =================================================== -->
+    <!-- MODAL REPORTE DE STOCK MÍNIMO (NUEVO) -->
+    <!-- =================================================== -->
+    <div id="reporteStockModal" class="modal">
+        <div class="modal-content modal-large">
+            <div class="modal-header" style="background: linear-gradient(135deg, #f57c00, #e65100);">
+                <h2><i class="fas fa-exclamation-triangle"></i> Reporte de Stock Mínimo</h2>
+                <span class="close" onclick="closeReporteStockModal()"><i class="fas fa-times"></i></span>
+            </div>
+            
+            <div class="reporte-body">
+                <div class="reporte-filtros">
+                    <div class="filtro-group">
+                        <label for="reporteFecha"><i class="fas fa-calendar-alt"></i> Productos actualizados hasta:</label>
+                        <input type="date" id="reporteFecha">
+                    </div>
+                    <div class="filtro-group">
+                        <label for="reporteCategoria"><i class="fas fa-tag"></i> Categoría:</label>
+                        <select id="reporteCategoria">
+                            <option value="todas">Todas las categorías</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="reporte-resumen" id="reporteResumen">
+                    <span class="resumen-item">
+                        <i class="fas fa-box"></i> Productos con stock bajo: <strong id="totalProductosBajo">0</strong>
+                    </span>
+                    <span class="resumen-item">
+                        <i class="fas fa-dollar-sign"></i> Costo total reposición: <strong id="totalCostoReposicion">$0.00</strong>
+                    </span>
+                </div>
+                
+                <div class="reporte-tabla-container">
+                    <table id="reporteStockTable">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Producto</th>
+                                <th>Marca</th>
+                                <th>Categoría</th>
+                                <th>Stock Actual</th>
+                                <th>Stock Mínimo</th>
+                                <th>Precio Proveedor</th>
+                                <th>Costo Reposición</th>
+                                <th>Estado</th> <!-- NUEVA COLUMNA -->
+                            </tr>
+                        </thead>
+                        <tbody id="reporteStockBody">
+                            <!-- Se carga dinámicamente -->
+                        </tbody>
+                        <tfoot id="reporteStockFoot">
+                            <tr>
+                                <td colspan="7" style="text-align: right; font-weight: bold;">TOTAL:</td>
+                                <td id="reporteTotalFoot" style="font-weight: bold; color: #00695c;">$0.00</td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                
+                <div class="reporte-acciones">
+                    <button class="btn btn-primary" onclick="exportarReporteStockPDF()">
+                        <i class="fas fa-file-pdf"></i> Exportar a PDF
+                    </button>
+                    <button class="btn btn-secondary" onclick="cargarReporteStock()">
+                        <i class="fas fa-sync-alt"></i> Actualizar
+                    </button>
                 </div>
             </div>
         </div>
@@ -492,15 +583,12 @@
     <!-- Notificación flotante -->
     <div id="notification" style="display:none;"></div>
 
+    <!-- Librerías para PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+    
     <!-- Supabase CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="script.js"></script>
-    <!-- Librerías para PDF -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
-
-<!-- Supabase CDN -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="script.js"></script>
 </body>
 </html>

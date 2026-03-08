@@ -290,12 +290,10 @@ function showNotification(message, type = 'info') {
 }
 
 // ============================================================
-// FUNCIÓN CLEANOLDRETURNS (CORREGIDA)
+// FUNCIÓN CLEANOLDRETURNS
 // ============================================================
 function cleanOldReturns() {
     console.log('🧹 Limpiando devoluciones antiguas...');
-    // Como ahora usamos Supabase, esta función ya no es necesaria
-    // La mantenemos por compatibilidad pero no hace nada
     return [];
 }
 
@@ -378,19 +376,17 @@ document.addEventListener('click', (e) => {
 });
 
 // ============================================================
-// AGREGAR PRODUCTO A LA VENTA (VERSIÓN CORREGIDA)
+// AGREGAR PRODUCTO A LA VENTA
 // ============================================================
 async function addProductToSale(productId) {
     console.log('🔄 Intentando agregar producto con ID:', productId);
     
     try {
-        // Verificar que el elemento total existe
         if (!document.getElementById('total')) {
             console.error('❌ Elemento #total no encontrado en el DOM');
             return;
         }
         
-        // Buscar producto completo en Supabase
         const { data: product, error } = await supabaseClient
             .from('productos')
             .select('*')
@@ -412,20 +408,16 @@ async function addProductToSale(productId) {
         
         console.log('✅ Producto encontrado:', product);
         
-        // Verificar stock
         if (product.stock <= 0) {
             alert(`❌ Producto "${product.nombre}" sin stock disponible`);
             return;
         }
         
-        // Verificar si ya existe en la venta actual
         const existingProductIndex = productosEnVenta.findIndex(p => p.id === product.id);
         
         if (existingProductIndex >= 0) {
-            // Ya existe, incrementar cantidad
             const newQty = productosEnVenta[existingProductIndex].cantidad + 1;
             
-            // Verificar que no exceda el stock disponible
             if (newQty > product.stock) {
                 alert(`⚠️ Solo hay ${product.stock} unidades disponibles de "${product.nombre}"`);
                 return;
@@ -435,7 +427,6 @@ async function addProductToSale(productId) {
             console.log(`✅ Cantidad incrementada: ahora ${newQty} unidades`);
             
         } else {
-            // Nuevo producto
             productosEnVenta.push({
                 id: product.id,
                 codigo: product.codigo,
@@ -444,18 +435,14 @@ async function addProductToSale(productId) {
                 precio: parseFloat(product.precio),
                 cantidad: 1,
                 stock: product.stock,
-                stock_minimo: product.stock_minimo
+                stock_minimo: product.stock_minimo,
+                precio_proveedor: product.precio_proveedor || 0
             });
             console.log('✅ Nuevo producto agregado a la venta');
         }
         
-        // Actualizar la tabla
         renderSalesTable();
-        
-        // Cerrar el modal de inventario si está abierto
         closeInventoryModal();
-        
-        // Mostrar notificación de éxito
         showNotification(`✅ "${product.nombre}" agregado`, 'success');
         
     } catch (error) {
@@ -464,14 +451,13 @@ async function addProductToSale(productId) {
     }
 }
 
-// Función para buscar y agregar desde la búsqueda
 async function addProductToSaleFromSearch(productId, codigo) {
     console.log('🔍 Agregando desde búsqueda:', { productId, codigo });
     await addProductToSale(productId);
 }
 
 // ============================================================
-// RENDERIZAR TABLA DE VENTAS (CORREGIDA)
+// RENDERIZAR TABLA DE VENTAS
 // ============================================================
 function renderSalesTable() {
     const salesBody = document.getElementById('salesBody');
@@ -567,7 +553,7 @@ function clearAll() {
 }
 
 // ============================================================
-// ACTUALIZAR TOTAL (CORREGIDA)
+// ACTUALIZAR TOTAL
 // ============================================================
 function updateTotal() {
     const totalElement = document.getElementById('total');
@@ -582,7 +568,7 @@ function updateTotal() {
 }
 
 // ============================================================
-// ESTADO VACÍO (CORREGIDA)
+// ESTADO VACÍO
 // ============================================================
 function updateEmptyState() {
     const salesTable = document.getElementById('salesTable');
@@ -863,7 +849,7 @@ function filterInventory() {
 }
 
 // ============================================================
-// MODAL ADMIN - GESTIÓN DE PRODUCTOS
+// MODAL ADMIN - GESTIÓN DE PRODUCTOS (ACTUALIZADO)
 // ============================================================
 
 async function openAdminModal() {
@@ -996,18 +982,30 @@ async function renderAdminProductGrid(categoryId, searchQuery = '') {
             return;
         }
         
-        grid.innerHTML = productos.map(p => `
+        grid.innerHTML = productos.map(p => {
+            const utilidad = p.precio - (p.precio_proveedor || 0);
+            const porcentajeUtilidad = p.precio_proveedor > 0 ? ((utilidad / p.precio_proveedor) * 100).toFixed(1) : 0;
+            
+            return `
             <div class="admin-product-card ${p.stock <= p.stock_minimo ? 'low-stock' : ''}">
                 <div class="admin-product-header">
                     <span class="admin-product-brand">${p.marca || 'Sin marca'}</span>
                     <span class="admin-product-code">Cód: ${p.codigo}</span>
                 </div>
                 <div class="admin-product-name">${p.nombre}</div>
+                
                 <div class="admin-product-details">
                     <div class="admin-product-price">
-                        <label>Precio</label>
+                        <label>Precio Público</label>
                         <input type="number" id="price_${p.id}" value="${p.precio}" min="0" step="0.01" class="admin-edit-input">
                     </div>
+                    <div class="admin-product-price-prov">
+                        <label>Precio Prov.</label>
+                        <input type="number" id="price_prov_${p.id}" value="${p.precio_proveedor || 0}" min="0" step="0.01" class="admin-edit-input">
+                    </div>
+                </div>
+                
+                <div class="admin-product-details">
                     <div class="admin-product-stock">
                         <label>Stock</label>
                         <input type="number" id="stock_${p.id}" value="${p.stock}" min="0" class="admin-edit-input">
@@ -1017,6 +1015,14 @@ async function renderAdminProductGrid(categoryId, searchQuery = '') {
                         <input type="number" id="minstock_${p.id}" value="${p.stock_minimo || 1}" min="1" class="admin-edit-input">
                     </div>
                 </div>
+                
+                <div class="admin-product-utilidad">
+                    <span class="utilidad-label">Utilidad:</span>
+                    <span class="utilidad-value ${utilidad > 0 ? 'positiva' : 'negativa'}">
+                        $${utilidad.toFixed(2)} (${porcentajeUtilidad}%)
+                    </span>
+                </div>
+                
                 <div class="admin-product-actions">
                     <button class="admin-btn-save" onclick="saveProductChanges(${p.id})">
                         <i class="fas fa-save"></i> Guardar
@@ -1025,11 +1031,12 @@ async function renderAdminProductGrid(categoryId, searchQuery = '') {
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
+                
                 <div class="admin-product-status ${p.stock <= p.stock_minimo ? 'status-warning' : 'status-ok'}">
                     ${p.stock <= p.stock_minimo ? '⚠️ Stock bajo' : '✓ Stock OK'}
                 </div>
             </div>
-        `).join('');
+        `}).join('');
         
     } catch (error) {
         console.error('Error:', error);
@@ -1084,11 +1091,17 @@ async function showAdminAddProductView() {
 
 async function saveProductChanges(productId) {
     const precio = parseFloat(document.getElementById(`price_${productId}`).value);
+    const precioProveedor = parseFloat(document.getElementById(`price_prov_${productId}`).value);
     const stock = parseInt(document.getElementById(`stock_${productId}`).value);
     const stockMinimo = parseInt(document.getElementById(`minstock_${productId}`).value);
     
     if (isNaN(precio) || precio < 0) {
-        alert('El precio debe ser un número válido');
+        alert('El precio público debe ser un número válido');
+        return;
+    }
+    
+    if (isNaN(precioProveedor) || precioProveedor < 0) {
+        alert('El precio proveedor debe ser un número válido');
         return;
     }
     
@@ -1102,6 +1115,7 @@ async function saveProductChanges(productId) {
             .from('productos')
             .update({
                 precio: precio,
+                precio_proveedor: precioProveedor,
                 stock: stock,
                 stock_minimo: stockMinimo
             })
@@ -1154,10 +1168,11 @@ document.getElementById('adminAddProductForm')?.addEventListener('submit', async
     const marca = document.getElementById('adminProdBrand').value.trim() || null;
     const categoria = parseInt(document.getElementById('adminProdCategory').value);
     const precio = parseFloat(document.getElementById('adminProdPrice').value);
+    const precioProveedor = parseFloat(document.getElementById('adminProdPriceProveedor').value);
     const stock = parseInt(document.getElementById('adminProdStock').value);
     const minimo = parseInt(document.getElementById('adminProdMinStock').value);
     
-    if (!codigo || !nombre || isNaN(categoria) || isNaN(precio) || precio <= 0 || isNaN(stock) || stock < 0) {
+    if (!codigo || !nombre || isNaN(categoria) || isNaN(precio) || precio <= 0 || isNaN(precioProveedor) || precioProveedor < 0 || isNaN(stock) || stock < 0) {
         showAdminMessage('Faltan datos o hay valores inválidos', 'error');
         return;
     }
@@ -1167,8 +1182,9 @@ document.getElementById('adminAddProductForm')?.addEventListener('submit', async
         nombre,
         marca,
         categoria_id: categoria,
-        precio,
-        stock,
+        precio: precio,
+        precio_proveedor: precioProveedor,
+        stock: stock,
         stock_minimo: minimo,
         activo: true
     };
@@ -1204,26 +1220,351 @@ function showAdminMessage(text, type) {
     msg.className = 'admin-message ' + type;
     msg.style.display = 'block';
 }
+
+// ============================================================
+// REPORTE DE STOCK MÍNIMO (VERSIÓN CORREGIDA)
+// ============================================================
+
+let productosStockBajo = [];
+
+// Mostrar modal de reporte
+async function showReporteStockModal() {
+    // Establecer fecha actual por defecto
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('reporteFecha').value = today;
+    
+    // Cargar categorías en el select
+    await cargarCategoriasReporte();
+    
+    // Cargar datos del reporte
+    await cargarReporteStock();
+    
+    document.getElementById('reporteStockModal').style.display = 'block';
+}
+
+function closeReporteStockModal() {
+    document.getElementById('reporteStockModal').style.display = 'none';
+}
+
+// Cargar categorías en el select
+async function cargarCategoriasReporte() {
+    const select = document.getElementById('reporteCategoria');
+    select.innerHTML = '<option value="todas">Cargando...</option>';
+    
+    try {
+        const { data: categorias, error } = await supabaseClient
+            .from('categorias')
+            .select('*')
+            .order('nombre');
+        
+        if (error) throw error;
+        
+        select.innerHTML = '<option value="todas">Todas las categorías</option>';
+        
+        categorias.forEach(cat => {
+            const option = document.createElement('option');
+            option.value = cat.id;
+            option.textContent = cat.nombre;
+            select.appendChild(option);
+        });
+        
+    } catch (error) {
+        console.error('Error cargando categorías:', error);
+        select.innerHTML = '<option value="todas">Error al cargar</option>';
+    }
+}
+
+// ============================================================
+// CARGAR REPORTE DE STOCK MÍNIMO (CORREGIDO)
+// ============================================================
+async function cargarReporteStock() {
+    const fecha = document.getElementById('reporteFecha').value;
+    const categoriaId = document.getElementById('reporteCategoria').value;
+    
+    const tbody = document.getElementById('reporteStockBody');
+    if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="9" class="loading-row"><i class="fas fa-spinner fa-spin"></i> Cargando productos...</td></tr>';
+    }
+    
+    try {
+        console.log('🔍 Cargando reporte de stock mínimo...');
+        
+        // Consulta directa a la tabla productos
+        let query = supabaseClient
+            .from('productos')
+            .select(`
+                *,
+                categorias (nombre)
+            `)
+            .eq('activo', true);
+        
+        // Aplicar filtro de categoría
+        if (categoriaId !== 'todas') {
+            query = query.eq('categoria_id', categoriaId);
+        }
+        
+        // Aplicar filtro de fecha
+        if (fecha) {
+            query = query.lte('fecha_actualizacion', `${fecha}T23:59:59`);
+        }
+        
+        const { data: todosProductos, error } = await query;
+        
+        if (error) throw error;
+        
+        console.log(`📦 Total productos activos: ${todosProductos?.length || 0}`);
+        
+        // FILTRAR productos con stock <= stock_minimo (en JavaScript)
+        productosStockBajo = todosProductos.filter(p => {
+            return p.stock <= p.stock_minimo;
+        });
+        
+        console.log(`📊 Productos con stock bajo: ${productosStockBajo.length}`);
+        
+        // Mostrar cada producto para debug
+        productosStockBajo.forEach(p => {
+            const faltante = Math.max(0, p.stock_minimo - p.stock);
+            const costo = faltante * (p.precio_proveedor || 0);
+            console.log(`   - ${p.nombre}: Stock ${p.stock}/${p.stock_minimo}, Faltante: ${faltante}, Precio Prov: $${p.precio_proveedor || 0}, Costo: $${costo}`);
+        });
+        
+        // Ordenar por estado (agotados primero, luego bajo stock)
+        productosStockBajo.sort((a, b) => {
+            const aCritico = a.stock === 0 ? 0 : (a.stock < a.stock_minimo ? 1 : 2);
+            const bCritico = b.stock === 0 ? 0 : (b.stock < b.stock_minimo ? 1 : 2);
+            if (aCritico !== bCritico) return aCritico - bCritico;
+            return a.nombre.localeCompare(b.nombre);
+        });
+        
+        // Calcular totales
+        const totalProductos = productosStockBajo.length;
+        const productosConFaltante = productosStockBajo.filter(p => p.stock < p.stock_minimo).length;
+        const productosAgotados = productosStockBajo.filter(p => p.stock === 0).length;
+        
+        const totalCosto = productosStockBajo.reduce((sum, p) => {
+            if (p.stock < p.stock_minimo) {
+                const cantidadFaltante = p.stock_minimo - p.stock;
+                return sum + (cantidadFaltante * (p.precio_proveedor || 0));
+            }
+            return sum;
+        }, 0);
+        
+        // Actualizar resumen
+        const totalElement = document.getElementById('totalProductosBajo');
+        if (totalElement) {
+            totalElement.textContent = `${totalProductos} (${productosConFaltante} con faltante, ${productosAgotados} agotados)`;
+        }
+        
+        const costoElement = document.getElementById('totalCostoReposicion');
+        if (costoElement) {
+            costoElement.textContent = `$${totalCosto.toFixed(2)}`;
+        }
+        
+        // Renderizar tabla
+        renderReporteStockTable();
+        
+    } catch (error) {
+        console.error('❌ Error cargando reporte:', error);
+        const tbody = document.getElementById('reporteStockBody');
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="9" class="error-row">Error al cargar datos: ${error.message}</td></tr>`;
+        }
+    }
+}
+
+// ============================================================
+// RENDERIZAR TABLA DE REPORTE (CORREGIDA)
+// ============================================================
+function renderReporteStockTable() {
+    const tbody = document.getElementById('reporteStockBody');
+    const foot = document.getElementById('reporteTotalFoot');
+    
+    if (!tbody || !foot) {
+        console.error('❌ No se encontraron elementos de la tabla de reporte');
+        return;
+    }
+    
+    if (productosStockBajo.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="empty-row">No hay productos con stock mínimo</td></tr>';
+        foot.textContent = '$0.00';
+        return;
+    }
+    
+    let totalGeneral = 0;
+    let productosConFaltante = 0;
+    let productosAgotados = 0;
+    
+    tbody.innerHTML = productosStockBajo.map(p => {
+        const stockActual = p.stock;
+        const stockMinimo = p.stock_minimo;
+        const precioProv = p.precio_proveedor || 0;
+        
+        // Calcular faltante y costo
+        let costoReposicion = 0;
+        let faltante = 0;
+        let estadoClass = '';
+        let estadoTexto = '';
+        
+        if (stockActual === 0) {
+            // Producto agotado
+            productosAgotados++;
+            faltante = stockMinimo;
+            costoReposicion = faltante * precioProv;
+            estadoClass = 'stock-cero';
+            estadoTexto = '🔥 AGOTADO';
+        } else if (stockActual < stockMinimo) {
+            // Producto con stock bajo
+            productosConFaltante++;
+            faltante = stockMinimo - stockActual;
+            costoReposicion = faltante * precioProv;
+            estadoClass = 'stock-bajo';
+            estadoTexto = `⚠️ Faltan ${faltante}`;
+        } else {
+            // Producto en mínimo exacto (stock === stock_minimo)
+            estadoClass = 'stock-ok';
+            estadoTexto = '✓ Completo';
+            costoReposicion = 0;
+        }
+        
+        totalGeneral += costoReposicion;
+        
+        return `
+            <tr class="${estadoClass}">
+                <td>${p.codigo}</td>
+                <td>${p.nombre}</td>
+                <td>${p.marca || 'N/A'}</td>
+                <td>${p.categorias?.nombre || 'N/A'}</td>
+                <td class="stock-actual">${stockActual}</td>
+                <td>${stockMinimo}</td>
+                <td class="precio-proveedor">$${precioProv.toFixed(2)}</td>
+                <td class="costo-reposicion">$${costoReposicion.toFixed(2)}</td>
+                <td class="estado-cell">${estadoTexto}</td>
+            </tr>
+        `;
+    }).join('');
+    
+    // Actualizar el pie de tabla con el total
+    foot.textContent = `$${totalGeneral.toFixed(2)}`;
+    
+    // Actualizar el resumen superior
+    const totalElement = document.getElementById('totalProductosBajo');
+    const costoElement = document.getElementById('totalCostoReposicion');
+    
+    if (totalElement) {
+        totalElement.textContent = `${productosStockBajo.length} (${productosConFaltante} con faltante, ${productosAgotados} agotados)`;
+    }
+    
+    if (costoElement) {
+        costoElement.textContent = `$${totalGeneral.toFixed(2)}`;
+    }
+    
+    console.log('✅ Reporte actualizado:', {
+        totalProductos: productosStockBajo.length,
+        conFaltante: productosConFaltante,
+        agotados: productosAgotados,
+        costoTotal: totalGeneral
+    });
+}
+
+// Filtrar reporte por categoría
+document.getElementById('reporteCategoria')?.addEventListener('change', cargarReporteStock);
+document.getElementById('reporteFecha')?.addEventListener('change', cargarReporteStock);
+
+// ============================================================
+// EXPORTAR REPORTE A PDF
+// ============================================================
+async function exportarReporteStockPDF() {
+    const fecha = document.getElementById('reporteFecha').value;
+    const categoria = document.getElementById('reporteCategoria').selectedOptions[0]?.text || 'Todas';
+    
+    if (productosStockBajo.length === 0) {
+        showNotification('No hay datos para exportar', 'warning');
+        return;
+    }
+    
+    showNotification('Generando PDF...', 'info');
+    
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        // Título
+        doc.setFontSize(20);
+        doc.setTextColor(230, 81, 0);
+        doc.text('Reporte de Stock Mínimo', 105, 20, { align: 'center' });
+        
+        // Subtítulo
+        doc.setFontSize(12);
+        doc.setTextColor(100);
+        doc.text('Ferretería Alex', 105, 28, { align: 'center' });
+        
+        // Fecha del reporte
+        const fechaFormateada = fecha ? new Date(fecha).toLocaleDateString('es-MX') : 'Actual';
+        doc.text(`Fecha: ${fechaFormateada} | Categoría: ${categoria}`, 105, 36, { align: 'center' });
+        
+        // Resumen
+        const totalCosto = document.getElementById('totalCostoReposicion').textContent;
+        doc.setFontSize(11);
+        doc.setTextColor(0);
+        doc.text(`Productos con stock bajo: ${productosStockBajo.length}`, 20, 48);
+        doc.text(`Costo total reposición: ${totalCosto}`, 20, 55);
+        
+        // Tabla de productos
+        const tableData = productosStockBajo.map(p => {
+            const faltante = Math.max(0, p.stock_minimo - p.stock);
+            const costo = faltante * (p.precio_proveedor || 0);
+            return [
+                p.codigo,
+                p.nombre.substring(0, 30),
+                p.stock.toString(),
+                p.stock_minimo.toString(),
+                `$${(p.precio_proveedor || 0).toFixed(2)}`,
+                `$${costo.toFixed(2)}`
+            ];
+        });
+        
+        doc.autoTable({
+            startY: 65,
+            head: [['Código', 'Producto', 'Stock', 'Mínimo', 'P. Prov.', 'Costo']],
+            body: tableData,
+            theme: 'striped',
+            headStyles: { fillColor: [230, 81, 0] },
+            foot: [['', '', '', '', 'TOTAL:', document.getElementById('reporteTotalFoot').textContent]],
+            footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' }
+        });
+        
+        // Nota al pie
+        const finalY = doc.lastAutoTable.finalY + 10;
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+        doc.text('Este reporte muestra los productos que requieren reposición.', 20, finalY);
+        doc.text('Los costos se calculan según el precio de proveedor.', 20, finalY + 5);
+        doc.text(`Generado el ${new Date().toLocaleString()}`, 20, finalY + 10);
+        
+        // Guardar PDF
+        const nombreArchivo = `Reporte_Stock_Minimo_${fecha || 'actual'}.pdf`;
+        doc.save(nombreArchivo);
+        showNotification('✅ PDF generado correctamente', 'success');
+        
+    } catch (error) {
+        console.error('Error generando PDF:', error);
+        showNotification('Error al generar PDF: ' + error.message, 'error');
+    }
+}
+
 // ============================================================
 // DEVOLUCIONES POR DÍA - FUNCIONES
 // ============================================================
 
 let ventasDelDia = [];
 let devolucionesDelDia = [];
-let selectedReturns = new Map(); // Map para almacenar devoluciones seleccionadas
+let selectedReturns = new Map();
 
-// Mostrar modal de devolución
 function showReturnModal() {
-    // Establecer fecha actual por defecto
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('returnDate').value = today;
-    
-    // Resetear selecciones
     selectedReturns.clear();
-    
-    // Cargar ventas del día
     loadSalesByDate();
-    
     document.getElementById('returnModal').style.display = 'block';
 }
 
@@ -1231,7 +1572,6 @@ function closeReturnModal() {
     document.getElementById('returnModal').style.display = 'none';
 }
 
-// Cambiar entre tabs
 function switchReturnTab(tab) {
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.tab-panel').forEach(panel => panel.classList.remove('active'));
@@ -1246,7 +1586,6 @@ function switchReturnTab(tab) {
     }
 }
 
-// Cargar ventas por fecha seleccionada
 async function loadSalesByDate() {
     const fecha = document.getElementById('returnDate').value;
     if (!fecha) return;
@@ -1255,7 +1594,6 @@ async function loadSalesByDate() {
     const endDate = `${fecha}T23:59:59`;
     
     try {
-        // Cargar ventas del día
         const { data: ventas, error } = await supabaseClient
             .from('ventas')
             .select(`
@@ -1282,14 +1620,8 @@ async function loadSalesByDate() {
         if (error) throw error;
         
         ventasDelDia = ventas || [];
-        
-        // Cargar devoluciones del día
         await loadReturnsByDate(fecha);
-        
-        // Actualizar resumen
         updateDateSummary();
-        
-        // Renderizar ventas
         renderVentasDia();
         
     } catch (error) {
@@ -1298,7 +1630,6 @@ async function loadSalesByDate() {
     }
 }
 
-// Cargar devoluciones por fecha
 async function loadReturnsByDate(fecha) {
     const startDate = `${fecha}T00:00:00`;
     const endDate = `${fecha}T23:59:59`;
@@ -1328,7 +1659,6 @@ async function loadReturnsByDate(fecha) {
     }
 }
 
-// Actualizar resumen de fecha
 function updateDateSummary() {
     const totalVentas = ventasDelDia.length;
     const totalDevuelto = devolucionesDelDia.reduce((sum, d) => {
@@ -1339,7 +1669,6 @@ function updateDateSummary() {
     document.getElementById('totalDevueltoDia').textContent = `$${totalDevuelto.toFixed(2)}`;
 }
 
-// Renderizar ventas del día
 function renderVentasDia() {
     const container = document.getElementById('ventasDiaContainer');
     
@@ -1349,7 +1678,6 @@ function renderVentasDia() {
     }
     
     container.innerHTML = ventasDelDia.map(venta => {
-        // Verificar productos ya devueltos
         const productosDevueltos = devolucionesDelDia
             .filter(d => d.venta_id === venta.id)
             .reduce((map, d) => {
@@ -1427,7 +1755,6 @@ function renderVentasDia() {
     updateSelectedCount();
 }
 
-// Toggle venta detalle
 function toggleVentaDetalle(header) {
     const detalle = header.nextElementSibling;
     detalle.classList.toggle('expanded');
@@ -1438,7 +1765,6 @@ function toggleVentaDetalle(header) {
     }
 }
 
-// Toggle selección de venta completa
 function toggleVentaSeleccion(checkbox, ventaId) {
     const ventaCard = checkbox.closest('.venta-card');
     const productoCheckboxes = ventaCard.querySelectorAll('.producto-checkbox input[type="checkbox"]');
@@ -1463,7 +1789,6 @@ function toggleVentaSeleccion(checkbox, ventaId) {
     updateSelectedCount();
 }
 
-// Toggle selección de producto individual
 function toggleProductoSeleccion(checkbox, ventaId, detalleId) {
     const key = `${ventaId}-${detalleId}`;
     
@@ -1478,7 +1803,6 @@ function toggleProductoSeleccion(checkbox, ventaId, detalleId) {
     } else {
         selectedReturns.delete(key);
         
-        // Desmarcar checkbox de venta si todos están desmarcados
         const ventaCard = checkbox.closest('.venta-card');
         const ventaCheckbox = ventaCard.querySelector('.venta-header-left > input[type="checkbox"]');
         const otrosCheckboxes = ventaCard.querySelectorAll('.producto-checkbox input[type="checkbox"]:checked');
@@ -1490,7 +1814,6 @@ function toggleProductoSeleccion(checkbox, ventaId, detalleId) {
     updateSelectedCount();
 }
 
-// Actualizar cantidad seleccionada
 function updateSelectedQuantity(ventaId, detalleId, cantidad) {
     const key = `${ventaId}-${detalleId}`;
     if (selectedReturns.has(key)) {
@@ -1498,21 +1821,18 @@ function updateSelectedQuantity(ventaId, detalleId, cantidad) {
         item.cantidad = parseInt(cantidad);
         selectedReturns.set(key, item);
         
-        // Actualizar subtotal
         const row = document.querySelector(`tr[data-detalle-id="${detalleId}"]`);
         const precio = parseFloat(row.cells[5].textContent.replace('$', ''));
         row.querySelector(`.subtotal-${detalleId}`).textContent = `$${(precio * cantidad).toFixed(2)}`;
     }
 }
 
-// Actualizar contador de seleccionados
 function updateSelectedCount() {
     const count = selectedReturns.size;
     document.getElementById('selectedCount').textContent = 
         `${count} producto${count !== 1 ? 's' : ''} seleccionado${count !== 1 ? 's' : ''}`;
 }
 
-// Procesar devoluciones seleccionadas
 async function procesarDevolucionesSeleccionadas() {
     if (selectedReturns.size === 0) {
         alert('No hay productos seleccionados para devolver');
@@ -1545,7 +1865,6 @@ async function procesarDevolucionesSeleccionadas() {
         
         showNotification(`✅ ${devoluciones.length} devolución(es) procesada(s)`, 'success');
         
-        // Recargar datos
         selectedReturns.clear();
         await loadSalesByDate();
         updateSelectedCount();
@@ -1556,7 +1875,6 @@ async function procesarDevolucionesSeleccionadas() {
     }
 }
 
-// Cargar historial de devoluciones
 async function loadHistorialDevoluciones() {
     const container = document.getElementById('historialContainer');
     container.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Cargando historial...</div>';
@@ -1583,7 +1901,6 @@ async function loadHistorialDevoluciones() {
             return;
         }
         
-        // Agrupar por fecha
         const grouped = devoluciones.reduce((acc, dev) => {
             const fecha = new Date(dev.fecha).toLocaleDateString();
             if (!acc[fecha]) acc[fecha] = [];
@@ -1620,7 +1937,6 @@ async function loadHistorialDevoluciones() {
     }
 }
 
-// Filtrar ventas del día
 function filterVentasDia() {
     const query = document.getElementById('ventasDiaSearch').value.toLowerCase();
     const cards = document.querySelectorAll('.venta-card');
@@ -1631,7 +1947,6 @@ function filterVentasDia() {
     });
 }
 
-// Filtrar historial
 function filterHistorial() {
     const query = document.getElementById('historialSearch').value.toLowerCase();
     const cards = document.querySelectorAll('.historial-card');
@@ -1643,36 +1958,6 @@ function filterHistorial() {
 }
 
 // ============================================================
-// FUNCIÓN PARA VER HISTORIAL DE DEVOLUCIONES (opcional)
-// ============================================================
-async function verHistorialDevoluciones() {
-    try {
-        const { data, error } = await supabaseClient
-            .from('devoluciones')
-            .select(`
-                *,
-                ventas (fecha, total),
-                detalle_ventas (
-                    cantidad,
-                    precio_unit,
-                    productos (nombre, codigo, marca)
-                )
-            `)
-            .order('fecha', { ascending: false })
-            .limit(20);
-
-        if (error) throw error;
-
-        console.log('📜 Historial de devoluciones:', data);
-        return data;
-        
-    } catch (error) {
-        console.error('Error:', error);
-        return [];
-    }
-}
-
-// ============================================================
 // CORTE DE CAJA - FUNCIONES
 // ============================================================
 
@@ -1681,12 +1966,9 @@ let currentCorteData = {
     devoluciones: []
 };
 
-// Mostrar modal de corte
 function showCorteModal() {
-    // Establecer fecha actual
     const today = new Date().toISOString().split('T')[0];
     document.getElementById('corteDate').value = today;
-    
     document.getElementById('corteModal').style.display = 'block';
     loadCorteData();
     loadHistorialCortes();
@@ -1696,7 +1978,6 @@ function closeCorteModal() {
     document.getElementById('corteModal').style.display = 'none';
 }
 
-// Cargar datos del corte
 async function loadCorteData() {
     const fecha = document.getElementById('corteDate').value;
     if (!fecha) return;
@@ -1705,7 +1986,6 @@ async function loadCorteData() {
     const endDate = `${fecha}T23:59:59`;
     
     try {
-        // Cargar ventas del día
         const { data: ventas, error: ventasError } = await supabaseClient
             .from('ventas')
             .select(`
@@ -1728,7 +2008,6 @@ async function loadCorteData() {
         
         if (ventasError) throw ventasError;
         
-        // Cargar devoluciones del día
         const { data: devoluciones, error: devError } = await supabaseClient
             .from('devoluciones')
             .select(`
@@ -1761,12 +2040,10 @@ async function loadCorteData() {
     }
 }
 
-// Actualizar resumen del corte
 function updateCorteResumen() {
     const ventas = currentCorteData.ventas;
     const devoluciones = currentCorteData.devoluciones;
     
-    // Totales
     const totalVentas = ventas.reduce((sum, v) => sum + parseFloat(v.total || 0), 0);
     const totalEfectivo = ventas
         .filter(v => v.metodo_pago === 'efectivo')
@@ -1779,14 +2056,12 @@ function updateCorteResumen() {
         return sum + (d.cantidad * (d.detalle_ventas?.precio_unit || 0));
     }, 0);
     
-    // Estadísticas
     const numVentas = ventas.length;
     const ticketPromedio = numVentas > 0 ? totalVentas / numVentas : 0;
     const productosVendidos = ventas.reduce((sum, v) => {
         return sum + (v.detalle_ventas?.reduce((s, d) => s + d.cantidad, 0) || 0);
     }, 0);
     
-    // Actualizar DOM
     document.getElementById('corteTotalVentas').textContent = `$${totalVentas.toFixed(2)}`;
     document.getElementById('corteTotalEfectivo').textContent = `$${totalEfectivo.toFixed(2)}`;
     document.getElementById('corteTotalTarjeta').textContent = `$${totalTarjeta.toFixed(2)}`;
@@ -1796,7 +2071,6 @@ function updateCorteResumen() {
     document.getElementById('corteProductosVendidos').textContent = productosVendidos;
 }
 
-// Renderizar lista de ventas
 function renderCorteVentas() {
     const container = document.getElementById('corteVentasLista');
     
@@ -1846,7 +2120,6 @@ function renderCorteVentas() {
     `).join('');
 }
 
-// Toggle detalle de venta en corte
 function toggleVentaDetalleCorte(ventaId) {
     const detalle = document.getElementById(`detalle-${ventaId}`);
     detalle.classList.toggle('active');
@@ -1857,7 +2130,6 @@ function toggleVentaDetalleCorte(ventaId) {
     }
 }
 
-// Renderizar lista de devoluciones
 function renderCorteDevoluciones() {
     const container = document.getElementById('corteDevolucionesLista');
     
@@ -1882,7 +2154,6 @@ function renderCorteDevoluciones() {
     `).join('');
 }
 
-// Cambiar entre tabs
 function switchCorteTab(tab) {
     document.querySelectorAll('.corte-tab-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.corte-panel').forEach(panel => panel.classList.remove('active'));
@@ -1896,7 +2167,6 @@ function switchCorteTab(tab) {
     }
 }
 
-// Filtrar ventas en corte
 function filterCorteVentas() {
     const query = document.getElementById('corteVentasSearch').value.toLowerCase();
     const items = document.querySelectorAll('#corteVentasLista .corte-venta-item');
@@ -1907,7 +2177,6 @@ function filterCorteVentas() {
     });
 }
 
-// Filtrar devoluciones en corte
 function filterCorteDevoluciones() {
     const query = document.getElementById('corteDevolucionesSearch').value.toLowerCase();
     const items = document.querySelectorAll('#corteDevolucionesLista .corte-venta-item');
@@ -1918,11 +2187,9 @@ function filterCorteDevoluciones() {
     });
 }
 
-// Guardar corte en historial
 async function guardarCorte() {
     const fecha = document.getElementById('corteDate').value;
     
-    // Verificar si ya existe corte para esta fecha
     const { data: existente } = await supabaseClient
         .from('cierres_dia')
         .select('id')
@@ -1962,13 +2229,11 @@ async function guardarCorte() {
     
     try {
         if (existente) {
-            // Actualizar
             await supabaseClient
                 .from('cierres_dia')
                 .update(corteData)
                 .eq('fecha', fecha);
         } else {
-            // Insertar
             await supabaseClient
                 .from('cierres_dia')
                 .insert([corteData]);
@@ -1983,7 +2248,6 @@ async function guardarCorte() {
     }
 }
 
-// Cargar historial de cortes
 async function loadHistorialCortes() {
     const container = document.getElementById('historialCortesLista');
     
@@ -2019,14 +2283,13 @@ async function loadHistorialCortes() {
     }
 }
 
-// Cargar corte de fecha específica desde historial
 function loadCorteFecha(fecha) {
     document.getElementById('corteDate').value = fecha;
     loadCorteData();
 }
 
 // ============================================================
-// EXPORTAR CORTE A PDF (VERSIÓN COMPLETA Y CORREGIDA)
+// EXPORTAR CORTE A PDF
 // ============================================================
 async function exportCortePDF() {
     const fecha = document.getElementById('corteDate').value;
@@ -2038,35 +2301,26 @@ async function exportCortePDF() {
     showNotification('Generando PDF...', 'info');
     
     try {
-        // Verificar que jsPDF está disponible
         if (typeof window.jspdf === 'undefined') {
             throw new Error('Librería jsPDF no cargada');
         }
         
-        // Crear nuevo documento PDF
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         
-        // Configurar colores corporativos
-        const primaryColor = [0, 105, 92]; // #00695c
-        const secondaryColor = [0, 137, 123]; // #00897b
-        const dangerColor = [198, 40, 40]; // #c62828
+        const primaryColor = [0, 105, 92];
+        const secondaryColor = [0, 137, 123];
+        const dangerColor = [198, 40, 40];
         
-        // ===================================================
-        // ENCABEZADO
-        // ===================================================
-        
-        // Título principal
+        // Encabezado
         doc.setFontSize(24);
         doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
         doc.text('Ferretería Alex', 105, 20, { align: 'center' });
         
-        // Subtítulo
         doc.setFontSize(16);
         doc.setTextColor(100);
         doc.text('Corte de Caja', 105, 30, { align: 'center' });
         
-        // Fecha formateada
         const fechaFormateada = new Date(fecha).toLocaleDateString('es-MX', {
             weekday: 'long',
             year: 'numeric',
@@ -2077,14 +2331,9 @@ async function exportCortePDF() {
         doc.setTextColor(80);
         doc.text(fechaFormateada.charAt(0).toUpperCase() + fechaFormateada.slice(1), 105, 38, { align: 'center' });
         
-        // Línea decorativa
         doc.setDrawColor(secondaryColor[0], secondaryColor[1], secondaryColor[2]);
         doc.setLineWidth(0.75);
         doc.line(20, 45, 190, 45);
-        
-        // ===================================================
-        // RESUMEN - CUADROS DE TOTALES
-        // ===================================================
         
         // Obtener valores
         const totalVentas = document.getElementById('corteTotalVentas').textContent;
@@ -2095,18 +2344,16 @@ async function exportCortePDF() {
         const ticketPromedio = document.getElementById('corteTicketPromedio').textContent;
         const productosVendidos = document.getElementById('corteProductosVendidos').textContent;
         
-        // Título de sección
         doc.setFontSize(14);
         doc.setTextColor(0);
         doc.text('Resumen del Día', 20, 55);
         
-        // Crear cuadros de resumen
         const startY = 62;
         const boxWidth = 82;
         const boxHeight = 25;
         
-        // Fila 1: Total Ventas y Efectivo
-        doc.setFillColor(240, 248, 255); // Azul muy claro
+        // Fila 1
+        doc.setFillColor(240, 248, 255);
         doc.roundedRect(20, startY, boxWidth, boxHeight, 3, 3, 'F');
         doc.setFontSize(10);
         doc.setTextColor(80);
@@ -2116,7 +2363,7 @@ async function exportCortePDF() {
         doc.setTextColor(primaryColor[0], primaryColor[1], primaryColor[2]);
         doc.text(totalVentas, 25, startY + 20);
         
-        doc.setFillColor(232, 245, 233); // Verde muy claro
+        doc.setFillColor(232, 245, 233);
         doc.roundedRect(108, startY, boxWidth, boxHeight, 3, 3, 'F');
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
@@ -2124,11 +2371,11 @@ async function exportCortePDF() {
         doc.text('EFECTIVO', 113, startY + 7);
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(46, 125, 50); // Verde oscuro
+        doc.setTextColor(46, 125, 50);
         doc.text(totalEfectivo, 113, startY + 20);
         
-        // Fila 2: Tarjeta y Devoluciones
-        doc.setFillColor(255, 243, 224); // Naranja muy claro
+        // Fila 2
+        doc.setFillColor(255, 243, 224);
         doc.roundedRect(20, startY + 30, boxWidth, boxHeight, 3, 3, 'F');
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
@@ -2136,10 +2383,10 @@ async function exportCortePDF() {
         doc.text('TARJETA', 25, startY + 37);
         doc.setFontSize(14);
         doc.setFont('helvetica', 'bold');
-        doc.setTextColor(230, 81, 0); // Naranja
+        doc.setTextColor(230, 81, 0);
         doc.text(totalTarjeta, 25, startY + 50);
         
-        doc.setFillColor(255, 235, 238); // Rojo muy claro
+        doc.setFillColor(255, 235, 238);
         doc.roundedRect(108, startY + 30, boxWidth, boxHeight, 3, 3, 'F');
         doc.setFontSize(10);
         doc.setFont('helvetica', 'normal');
@@ -2150,10 +2397,7 @@ async function exportCortePDF() {
         doc.setTextColor(dangerColor[0], dangerColor[1], dangerColor[2]);
         doc.text(totalDevoluciones, 113, startY + 50);
         
-        // ===================================================
-        // ESTADÍSTICAS
-        // ===================================================
-        
+        // Estadísticas
         doc.setFontSize(14);
         doc.setTextColor(0);
         doc.text('Estadísticas', 20, 130);
@@ -2167,10 +2411,7 @@ async function exportCortePDF() {
         doc.text(`• Ticket Promedio: ${ticketPromedio}`, 25, statsY + 8);
         doc.text(`• Productos Vendidos: ${productosVendidos}`, 25, statsY + 16);
         
-        // ===================================================
-        // TABLA DE VENTAS
-        // ===================================================
-        
+        // Tabla de ventas
         let yPos = 165;
         
         doc.setFontSize(14);
@@ -2217,11 +2458,7 @@ async function exportCortePDF() {
             yPos += 15;
         }
         
-        // ===================================================
-        // TABLA DE DEVOLUCIONES
-        // ===================================================
-        
-        // Verificar si necesitamos una nueva página
+        // Tabla de devoluciones
         if (yPos > 250) {
             doc.addPage();
             yPos = 20;
@@ -2271,11 +2508,7 @@ async function exportCortePDF() {
             yPos += 15;
         }
         
-        // ===================================================
-        // PIE DE PÁGINA
-        // ===================================================
-        
-        // Línea final
+        // Pie de página
         doc.setDrawColor(200);
         doc.setLineWidth(0.5);
         doc.line(20, 280, 190, 280);
@@ -2285,11 +2518,6 @@ async function exportCortePDF() {
         doc.text('Ferretería Alex - Punto de Venta', 105, 287, { align: 'center' });
         doc.text(`Reporte generado: ${new Date().toLocaleString()}`, 105, 292, { align: 'center' });
         
-        // ===================================================
-        // GUARDAR PDF
-        // ===================================================
-        
-        // Nombre del archivo
         const nombreArchivo = `Corte_Caja_${fecha.replace(/-/g, '_')}.pdf`;
         doc.save(nombreArchivo);
         
@@ -2318,15 +2546,15 @@ window.addEventListener('click', (e) => {
     }
     if (e.target === document.getElementById('loginModal')) closeLoginModal();
     if (e.target === document.getElementById('corteModal')) closeCorteModal();
+    if (e.target === document.getElementById('reporteStockModal')) closeReporteStockModal();
 });
 
 // ============================================================
-// INICIALIZACIÓN (CORREGIDA)
+// INICIALIZACIÓN
 // ============================================================
 window.onload = async function() {
     console.log('🚀 Inicializando aplicación...');
     
-    // Verificar que los elementos del DOM existen
     const elementos = ['total', 'salesBody', 'salesTable', 'emptyState'];
     elementos.forEach(id => {
         if (!document.getElementById(id)) {
@@ -2340,14 +2568,11 @@ window.onload = async function() {
     await verificarYCrearCategorias();
     await loadCategories();
     
-    // Inicializar productosEnVenta como array vacío
     productosEnVenta = [];
     
-    // Actualizar UI
     renderSalesTable();
     updateEmptyState();
     
-    // Limpiar devoluciones antiguas (ahora existe la función)
     cleanOldReturns();
     
     try {
