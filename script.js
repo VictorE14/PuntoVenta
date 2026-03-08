@@ -2000,8 +2000,11 @@ async function loadCorteData() {
     const fecha = document.getElementById('corteDate').value;
     if (!fecha) return;
     
-    const startDate = `${fecha}T00:00:00`;
-    const endDate = `${fecha}T23:59:59`;
+       // MODIFICADO: Inicio a las 5:00 AM
+    const startDate = `${fecha}T05:00:00`;  // Inicio: 5:00 AM
+    
+    // MODIFICADO: Fin a las 11:00 PM
+    const endDate = `${fecha}T23:00:00`;    // Fin: 11:00 PM
     
     try {
         const { data: ventas, error: ventasError } = await supabaseClient
