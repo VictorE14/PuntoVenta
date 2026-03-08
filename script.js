@@ -457,7 +457,7 @@ async function addProductToSaleFromSearch(productId, codigo) {
 }
 
 // ============================================================
-// RENDERIZAR TABLA DE VENTAS
+// RENDERIZAR TABLA DE VENTAS (CORREGIDO)
 // ============================================================
 function renderSalesTable() {
     const salesBody = document.getElementById('salesBody');
@@ -469,39 +469,42 @@ function renderSalesTable() {
         return;
     }
     
+    // Siempre mostrar la tabla para mantener la cabecera visible
+    salesTable.style.display = 'table';
+    
     if (productosEnVenta.length === 0) {
+        // No hay productos: cuerpo vacío y mostrar emptyState
         salesBody.innerHTML = '';
-        salesTable.style.display = 'none';
         emptyState.style.display = 'flex';
-        updateTotal();
-        return;
+    } else {
+        // Hay productos: renderizar filas y ocultar emptyState
+        salesBody.innerHTML = productosEnVenta.map((p, index) => `
+            <tr data-product-id="${p.id}" data-price="${p.precio}">
+                <td>${index + 1}</td>
+                <td>${p.marca}</td>
+                <td>${p.nombre}</td>
+                <td>${p.codigo}</td>
+                <td>
+                    <div class="qty-control">
+                        <button class="qty-btn minus" onclick="changeQty(${p.id}, -1)">−</button>
+                        <span class="qty-value">${p.cantidad}</span>
+                        <button class="qty-btn plus" onclick="changeQty(${p.id}, 1)">+</button>
+                    </div>
+                </td>
+                <td>$${p.precio.toFixed(2)}</td>
+                <td class="subtotal">$${(p.cantidad * p.precio).toFixed(2)}</td>
+                <td>
+                    <button class="delete-row-btn" onclick="removeFromSale(${p.id})" title="Eliminar">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+        
+        emptyState.style.display = 'none';
     }
     
-    salesBody.innerHTML = productosEnVenta.map((p, index) => `
-        <tr data-product-id="${p.id}" data-price="${p.precio}">
-            <td>${index + 1}</td>
-            <td>${p.marca}</td>
-            <td>${p.nombre}</td>
-            <td>${p.codigo}</td>
-            <td>
-                <div class="qty-control">
-                    <button class="qty-btn minus" onclick="changeQty(${p.id}, -1)">−</button>
-                    <span class="qty-value">${p.cantidad}</span>
-                    <button class="qty-btn plus" onclick="changeQty(${p.id}, 1)">+</button>
-                </div>
-            </td>
-            <td>$${p.precio.toFixed(2)}</td>
-            <td class="subtotal">$${(p.cantidad * p.precio).toFixed(2)}</td>
-            <td>
-                <button class="delete-row-btn" onclick="removeFromSale(${p.id})" title="Eliminar">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </td>
-        </tr>
-    `).join('');
-    
-    salesTable.style.display = 'table';
-    emptyState.style.display = 'none';
+    // Siempre actualizar el total (aunque sea 0)
     updateTotal();
 }
 
@@ -543,13 +546,14 @@ function removeFromSale(productId) {
 }
 
 // ============================================================
-// LIMPIAR VENTA
+// LIMPIAR VENTA (CORREGIDO)
 // ============================================================
 function clearAll() {
     if (productosEnVenta.length === 0) return;
     if (!confirm('¿Deseas limpiar toda la venta actual?')) return;
+    
     productosEnVenta = [];
-    renderSalesTable();
+    renderSalesTable(); // Esto ya maneja correctamente el estado vacío
 }
 
 // ============================================================
@@ -568,18 +572,32 @@ function updateTotal() {
 }
 
 // ============================================================
-// ESTADO VACÍO
+// ESTADO VACÍO (CORREGIDO)
 // ============================================================
 function updateEmptyState() {
-    const salesTable = document.getElementById('salesTable');
+    const salesBody = document.getElementById('salesBody');
     const emptyState = document.getElementById('emptyState');
+    const salesTable = document.getElementById('salesTable');
     
-    if (!salesTable || !emptyState) return;
+    if (!salesBody || !emptyState || !salesTable) return;
     
     const hasRows = productosEnVenta.length > 0;
-    salesTable.style.display = hasRows ? 'table' : 'none';
-    emptyState.style.display = hasRows ? 'none' : 'flex';
+    
+    // Siempre mostrar la tabla (para que se vea la cabecera)
+    salesTable.style.display = 'table';
+    
+    if (hasRows) {
+        // Hay productos: ocultar emptyState, mostrar filas
+        emptyState.style.display = 'none';
+        // Las filas ya se renderizan en renderSalesTable
+    } else {
+        // No hay productos: mostrar emptyState, asegurar que no hay filas
+        emptyState.style.display = 'flex';
+        salesBody.innerHTML = ''; // Asegurar que no hay filas
+    }
 }
+
+
 
 // ============================================================
 // PAGAR
@@ -699,7 +717,7 @@ async function confirmPayment() {
     
     closePaymentModal();
     productosEnVenta = [];
-    renderSalesTable();
+    renderSalesTable(); // Esto mantendrá la cabecera visible
 }
 
 // ============================================================

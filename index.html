@@ -81,28 +81,30 @@
         </button>
     </div>
 
-    <div class="table-container">
-        <table id="salesTable">
-            <thead>
-                <tr>
-                    <th>No.</th>
-                    <th>Marca</th>
-                    <th>Artículo</th>
-                    <th>Código</th>
-                    <th>Cantidad</th>
-                    <th>Precio Unit.</th>
-                    <th>Subtotal</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody id="salesBody"></tbody>
-        </table>
-        <div class="empty-state" id="emptyState">
-            <i class="fas fa-shopping-cart"></i>
-            <p>No hay productos en la venta</p>
-            <small>Busca o selecciona productos del inventario</small>
-        </div>
+<div class="table-container">
+    <table id="salesTable">
+        <thead>
+            <tr>
+                <th>No.</th>
+                <th>Marca</th>
+                <th>Artículo</th>
+                <th>Código</th>
+                <th>Cantidad</th>
+                <th>Precio Unit.</th>
+                <th>Subtotal</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="salesBody">
+            <!-- Las filas se insertan aquí dinámicamente -->
+        </tbody>
+    </table>
+    <div class="empty-state" id="emptyState">
+        <i class="fas fa-shopping-cart"></i>
+        <p>No hay productos en la venta</p>
+        <small>Busca o selecciona productos del inventario</small>
     </div>
+</div>
 
     <div class="footer">
         <div class="footer-buttons">

@@ -4994,3 +4994,578 @@ tbody tr.highlight {
         color: black !important;
     }
 }
+
+/* ============================================================ */
+/* VERSIÓN MÓVIL MEJORADA - PARA CELULARES */
+/* ============================================================ */
+
+@media screen and (max-width: 600px) {
+    
+    /* ======================================== */
+    /* HEADER - MÁS COMPACTO */
+    /* ======================================== */
+    .header {
+        padding: 8px 10px;
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .header-logo {
+        width: 100%;
+        justify-content: space-between;
+    }
+    
+    .logo-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+    }
+    
+    .store-name {
+        font-size: 16px;
+    }
+    
+    .store-subtitle {
+        font-size: 10px;
+    }
+    
+    .header-datetime {
+        width: 100%;
+        justify-content: space-between;
+        order: 2;
+    }
+    
+    .datetime-item {
+        padding: 4px 8px;
+        flex: 1;
+        justify-content: center;
+    }
+    
+    .datetime-item input {
+        width: auto;
+        font-size: 12px;
+    }
+    
+    .btn-admin {
+        width: 100%;
+        margin: 5px 0 0 0;
+        justify-content: center;
+        order: 3;
+    }
+    
+    /* ======================================== */
+    /* BÚSQUEDA - ANCHO COMPLETO */
+    /* ======================================== */
+    .search-section {
+        padding: 8px 10px;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .search-wrapper {
+        width: 100%;
+    }
+    
+    #searchInput {
+        padding: 12px 12px 12px 38px;
+        font-size: 16px; /* Evita zoom en iOS */
+    }
+    
+    .btn-primary {
+        width: 100%;
+        padding: 12px;
+        justify-content: center;
+    }
+    
+    /* ======================================== */
+    /* TABLA DE VENTAS - REDISEÑADA PARA MÓVIL */
+    /* ======================================== */
+    .table-container {
+        padding: 8px 10px 100px;
+    }
+    
+    /* Convertimos la tabla en tarjetas */
+    #salesTable,
+    #salesTable thead,
+    #salesTable tbody,
+    #salesTable tr,
+    #salesTable td {
+        display: block;
+    }
+    
+    #salesTable thead {
+        display: none; /* Ocultamos cabeceras en móvil */
+    }
+    
+    #salesTable tbody tr {
+        background: white;
+        border: 1px solid #e0e0e0;
+        border-radius: 10px;
+        margin-bottom: 12px;
+        padding: 12px;
+        position: relative;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    #salesTable tbody tr td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px dashed #f0f0f0;
+        border-bottom: none;
+        text-align: right;
+    }
+    
+    #salesTable tbody tr td:last-child {
+        border-bottom: none;
+    }
+    
+    /* Etiquetas para cada campo */
+    #salesTable tbody tr td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #00695c;
+        text-align: left;
+        padding-right: 10px;
+        font-size: 13px;
+    }
+    
+    /* Asignamos las etiquetas */
+    #salesTable tbody tr td:nth-child(1)::before { content: 'No.'; }
+    #salesTable tbody tr td:nth-child(2)::before { content: 'Marca'; }
+    #salesTable tbody tr td:nth-child(3)::before { content: 'Artículo'; }
+    #salesTable tbody tr td:nth-child(4)::before { content: 'Código'; }
+    #salesTable tbody tr td:nth-child(5)::before { content: 'Cantidad'; }
+    #salesTable tbody tr td:nth-child(6)::before { content: 'P. Unit.'; }
+    #salesTable tbody tr td:nth-child(7)::before { content: 'Subtotal'; }
+    #salesTable tbody tr td:nth-child(8)::before { content: ''; }
+    
+    /* Ajustes específicos para cada columna */
+    #salesTable tbody tr td:nth-child(1) { font-weight: bold; color: #00695c; }
+    #salesTable tbody tr td:nth-child(6),
+    #salesTable tbody tr td:nth-child(7) { 
+        font-weight: 700; 
+        color: #00897b;
+    }
+    
+    /* Controles de cantidad */
+    .qty-control {
+        display: inline-flex;
+        margin-left: auto;
+    }
+    
+    .qty-btn {
+        width: 32px;
+        height: 32px;
+        font-size: 18px;
+    }
+    
+    .qty-value {
+        min-width: 35px;
+        font-size: 16px;
+    }
+    
+    /* Botón eliminar */
+    .delete-row-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        width: 36px;
+        height: 36px;
+        border-radius: 18px;
+        background: #ffebee;
+    }
+    
+    /* ======================================== */
+    /* FOOTER - MEJORADO */
+    /* ======================================== */
+    .footer {
+        padding: 8px 10px;
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .footer-buttons {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+        width: 100%;
+    }
+    
+    .footer-buttons .btn {
+        width: 100%;
+        padding: 12px 5px;
+        font-size: 12px;
+        white-space: normal;
+        word-break: keep-all;
+        min-height: 44px;
+    }
+    
+    .footer-buttons .btn i {
+        margin-right: 4px;
+        font-size: 14px;
+    }
+    
+    .total-box {
+        width: 100%;
+        max-width: 100%;
+        flex-direction: row;
+        justify-content: space-between;
+        padding: 12px 16px;
+    }
+    
+    .total-label {
+        font-size: 14px;
+    }
+    
+    .total-amount {
+        font-size: 20px;
+    }
+    
+    /* ======================================== */
+    /* MODALES - OPTIMIZADOS */
+    /* ======================================== */
+    .modal-content {
+        width: 95%;
+        margin: 10px auto;
+        max-height: 95vh;
+    }
+    
+    .modal-header {
+        padding: 12px;
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+    }
+    
+    .modal-header h2 {
+        font-size: 16px;
+    }
+    
+    .modal-header div[style*="flex"] {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 5px;
+    }
+    
+    .admin-user-badge {
+        width: 100%;
+        justify-content: center;
+        order: -1;
+    }
+    
+    .btn-sm {
+        padding: 8px 12px;
+        font-size: 13px;
+    }
+    
+    /* ======================================== */
+    /* CATEGORÍAS - GRID MEJORADO */
+    /* ======================================== */
+    .category-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        padding: 10px;
+    }
+    
+    .category-card {
+        padding: 15px 8px;
+    }
+    
+    .category-card-icon {
+        width: 45px;
+        height: 45px;
+        font-size: 20px;
+    }
+    
+    .category-card-name {
+        font-size: 12px;
+    }
+    
+    .category-card-count {
+        font-size: 10px;
+    }
+    
+    /* ======================================== */
+    /* PRODUCTOS - TARJETAS COMPACTAS */
+    /* ======================================== */
+    .inventory-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 10px;
+    }
+    
+    .inventory-card {
+        padding: 12px;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .inventory-card-brand {
+        width: 100%;
+        font-size: 11px;
+    }
+    
+    .inventory-card-name {
+        flex: 1;
+        font-size: 14px;
+    }
+    
+    .inventory-card-code {
+        font-size: 11px;
+        color: #999;
+    }
+    
+    .inventory-card-stock {
+        font-size: 11px;
+        background: #f5f5f5;
+        padding: 2px 8px;
+        border-radius: 12px;
+    }
+    
+    .inventory-card-price {
+        font-size: 16px;
+        margin: 0;
+    }
+    
+    .inventory-card-add {
+        width: 100%;
+        margin-top: 5px;
+        padding: 10px;
+    }
+    
+    /* ======================================== */
+    /* ADMIN - TARJETAS COMPACTAS */
+    /* ======================================== */
+    .admin-product-grid {
+        grid-template-columns: 1fr;
+        gap: 10px;
+        padding: 10px;
+    }
+    
+    .admin-product-card {
+        padding: 12px;
+    }
+    
+    .admin-product-details {
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+    }
+    
+    .admin-product-actions {
+        flex-direction: row;
+    }
+    
+    .admin-product-status {
+        position: static;
+        margin-top: 8px;
+        text-align: center;
+    }
+    
+    /* ======================================== */
+    /* FORMULARIOS - MÁS TÁCTILES */
+    /* ======================================== */
+    .form-row {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .form-group.half {
+        width: 100%;
+    }
+    
+    input, select, textarea {
+        font-size: 16px; /* Evita zoom en iOS */
+        padding: 12px;
+    }
+    
+    /* ======================================== */
+    /* DEVOLUCIONES - VISTA MÓVIL */
+    /* ======================================== */
+    .return-date-selector {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 12px;
+    }
+    
+    .date-picker {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+    
+    .date-picker input {
+        width: 100%;
+    }
+    
+    .date-summary {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .summary-item {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .return-tabs {
+        flex-direction: column;
+        padding: 8px;
+    }
+    
+    .tab-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 12px;
+    }
+    
+    .venta-card {
+        margin-bottom: 10px;
+    }
+    
+    .venta-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+        padding: 12px;
+    }
+    
+    .venta-header-left {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+    
+    .venta-info {
+        flex-wrap: wrap;
+        width: 100%;
+    }
+    
+    /* Tabla de devoluciones con scroll */
+    .return-table-container {
+        overflow-x: auto;
+    }
+    
+    #returnTable {
+        min-width: 700px;
+    }
+    
+    /* ======================================== */
+    /* CORTE DE CAJA - MÓVIL */
+    /* ======================================== */
+    .corte-resumen {
+        grid-template-columns: 1fr;
+        gap: 8px;
+    }
+    
+    .resumen-card {
+        padding: 12px;
+    }
+    
+    .resumen-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 20px;
+    }
+    
+    .resumen-value {
+        font-size: 18px;
+    }
+    
+    .corte-date-selector {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+    }
+    
+    .corte-tabs {
+        flex-direction: column;
+    }
+    
+    .corte-tab-btn {
+        width: 100%;
+    }
+    
+    /* ======================================== */
+    /* REPORTE DE STOCK - MÓVIL */
+    /* ======================================== */
+    .reporte-filtros {
+        flex-direction: column;
+    }
+    
+    .reporte-resumen {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .resumen-item {
+        text-align: center;
+    }
+    
+    #reporteStockTable {
+        min-width: 900px;
+    }
+    
+    .reporte-tabla-container {
+        overflow-x: auto;
+    }
+    
+    .reporte-acciones {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .reporte-acciones .btn {
+        width: 100%;
+    }
+    
+    /* ======================================== */
+    /* LOGIN - MÓVIL */
+    /* ======================================== */
+    .login-body {
+        padding: 20px 15px;
+    }
+    
+    .login-icon {
+        font-size: 48px;
+    }
+    
+    .login-icon i {
+        padding: 15px;
+    }
+    
+    /* ======================================== */
+    /* NOTIFICACIONES - MÓVIL */
+    /* ======================================== */
+    #notification {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        min-width: auto;
+        width: auto;
+    }
+}
+
+/* ======================================== */
+/* AJUSTES PARA PANTALLAS MUY PEQUEÑAS */
+/* ======================================== */
+@media screen and (max-width: 380px) {
+    .footer-buttons {
+        grid-template-columns: 1fr;
+    }
+    
+    .category-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .admin-product-details {
+        grid-template-columns: 1fr;
+    }
+    
+    .qty-control {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+}
