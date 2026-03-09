@@ -24,6 +24,45 @@ let isAdminLoggedIn = false;
 let currentAdminUser = null;
 let inactivityTimer;
 
+
+// ============================================================
+// OBTENER CONTEO REAL DE PRODUCTOS POR CATEGORÍA (CORREGIDO)
+// ============================================================
+async function obtenerConteoProductos() {
+    try {
+        console.log('🔍 Obteniendo conteo de productos por categoría...');
+        
+        // Versión corregida - obtenemos todos los productos y contamos manualmente
+        const { data: productos, error } = await supabaseClient
+            .from('productos')
+            .select('categoria_id')
+            .eq('activo', true);
+        
+        if (error) {
+            console.error('Error en obtenerConteoProductos:', error);
+            return {};
+        }
+        
+        // Crear un mapa de categoria_id -> cantidad contando manualmente
+        const conteoMap = {};
+        
+        if (productos && productos.length > 0) {
+            productos.forEach(producto => {
+                const catId = producto.categoria_id;
+                conteoMap[catId] = (conteoMap[catId] || 0) + 1;
+            });
+        }
+        
+        console.log('📊 Conteo obtenido:', conteoMap);
+        return conteoMap;
+        
+    } catch (error) {
+        console.error('Error obteniendo conteo:', error);
+        return {};
+    }
+}
+
+
 // ============================================================
 // FECHA Y HORA
 // ============================================================
@@ -457,9 +496,11 @@ async function addProductToSaleFromSearch(productId, codigo) {
 }
 
 // ============================================================
-// RENDERIZAR TABLA DE VENTAS (CORREGIDO)
+// RENDERIZAR TABLA DE VENTAS (CON LOGS)
 // ============================================================
 function renderSalesTable() {
+    console.log('🎨 Renderizando tabla con', productosEnVenta.length, 'productos');
+    
     const salesBody = document.getElementById('salesBody');
     const salesTable = document.getElementById('salesTable');
     const emptyState = document.getElementById('emptyState');
@@ -469,15 +510,13 @@ function renderSalesTable() {
         return;
     }
     
-    // Siempre mostrar la tabla para mantener la cabecera visible
     salesTable.style.display = 'table';
     
     if (productosEnVenta.length === 0) {
-        // No hay productos: cuerpo vacío y mostrar emptyState
         salesBody.innerHTML = '';
         emptyState.style.display = 'flex';
+        console.log('📭 No hay productos en la venta');
     } else {
-        // Hay productos: renderizar filas y ocultar emptyState
         salesBody.innerHTML = productosEnVenta.map((p, index) => `
             <tr data-product-id="${p.id}" data-price="${p.precio}">
                 <td>${index + 1}</td>
@@ -502,14 +541,14 @@ function renderSalesTable() {
         `).join('');
         
         emptyState.style.display = 'none';
+        console.log('✅ Tabla renderizada correctamente');
     }
     
-    // Siempre actualizar el total (aunque sea 0)
     updateTotal();
 }
 
 // ============================================================
-// CAMBIAR CANTIDAD
+// CAMBIAR CANTIDAD (VERIFICADA)
 // ============================================================
 async function changeQty(productId, delta) {
     const productIndex = productosEnVenta.findIndex(p => p.id === productId);
@@ -518,10 +557,12 @@ async function changeQty(productId, delta) {
     const newQty = productosEnVenta[productIndex].cantidad + delta;
     
     if (newQty < 1) {
+        // Si la cantidad es menor a 1, eliminar el producto
         removeFromSale(productId);
         return;
     }
     
+    // Verificar stock disponible
     const { data: product } = await supabaseClient
         .from('productos')
         .select('stock')
@@ -533,15 +574,28 @@ async function changeQty(productId, delta) {
         return;
     }
     
+    // Actualizar cantidad
     productosEnVenta[productIndex].cantidad = newQty;
+    
+    // Renderizar de nuevo
     renderSalesTable();
 }
 
 // ============================================================
-// ELIMINAR DE LA VENTA
+// ELIMINAR DE LA VENTA (CORREGIDO CON DEBUG)
 // ============================================================
 function removeFromSale(productId) {
-    productosEnVenta = productosEnVenta.filter(p => p.id !== productId);
+    console.log('🗑️ Intentando eliminar producto ID:', productId);
+    console.log('📦 Productos antes de eliminar:', productosEnVenta.length);
+    
+    // Filtrar el producto
+    const nuevosProductos = productosEnVenta.filter(p => p.id !== productId);
+    
+    productosEnVenta = nuevosProductos;
+    
+    console.log('📦 Productos después de eliminar:', productosEnVenta.length);
+    
+    // Forzar actualización
     renderSalesTable();
 }
 
@@ -557,18 +611,31 @@ function clearAll() {
 }
 
 // ============================================================
-// ACTUALIZAR TOTAL
+// ACTUALIZAR TOTAL (VERIFICADA)
 // ============================================================
 function updateTotal() {
     const totalElement = document.getElementById('total');
+    const headerTotalElement = document.getElementById('headerTotal'); // Si existe
+    
     if (!totalElement) {
         console.error('❌ No se encontró el elemento #total');
         return;
     }
     
-    const total = productosEnVenta.reduce((sum, p) => sum + (p.cantidad * p.precio), 0);
+    // Calcular total
+    const total = productosEnVenta.reduce((sum, p) => {
+        return sum + (p.cantidad * p.precio);
+    }, 0);
+    
+    // Actualizar en el footer
     totalElement.textContent = `$${total.toFixed(2)}`;
-    console.log('✅ Total actualizado:', `$${total.toFixed(2)}`);
+    
+    // Si hay un total en el header, actualizarlo también
+    if (headerTotalElement) {
+        headerTotalElement.textContent = `$${total.toFixed(2)}`;
+    }
+    
+    console.log('💰 Total actualizado:', `$${total.toFixed(2)}`);
 }
 
 // ============================================================
@@ -732,33 +799,56 @@ function closeInventoryModal() {
     document.getElementById('inventoryModal').style.display = 'none';
 }
 
+
+// ============================================================
+// VOLVER A CATEGORÍAS (ACTUALIZA CONTADORES)
+// ============================================================
 async function showCategoryView() {
     currentCategory = null;
     document.getElementById('categoryView').style.display = 'block';
     document.getElementById('productView').style.display = 'none';
     document.getElementById('inventoryModalTitle').innerHTML = '<i class="fas fa-boxes"></i> Catálogo de Productos';
-    await renderCategoryGrid();
+    await renderCategoryGrid(); // Siempre actualizar al volver
 }
 
+async function showAdminCategoryView() {
+    adminCurrentCategory = null;
+    document.getElementById('adminCategoryView').style.display = 'block';
+    document.getElementById('adminProductView').style.display = 'none';
+    document.getElementById('adminAddProductView').style.display = 'none';
+    document.getElementById('adminModalTitle').innerHTML = '<i class="fas fa-boxes"></i> Administrar Inventario';
+    await renderAdminCategoryGrid(); // Siempre actualizar al volver
+}
+
+// ============================================================
+// FUNCIÓN DE PRUEBA - AGREGAR AQUÍ (DESPUÉS DE obtenerConteoProductos)
+// ============================================================
+async function testConteo() {
+    console.log('🧪 Ejecutando prueba de conteo...');
+    const conteo = await obtenerConteoProductos();
+    console.log('🧪 Resultado del test:', conteo);
+    return conteo;
+}
+
+// ============================================================
+// RENDERIZAR CATEGORÍAS (CORREGIDO)
+// ============================================================
 async function renderCategoryGrid() {
     const grid = document.getElementById('categoryGrid');
     
     grid.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Cargando categorías...</div>';
     
     try {
-        const { data: categorias, error } = await supabaseClient
+        // Obtener categorías
+        const { data: categorias, error: catError } = await supabaseClient
             .from('categorias')
-            .select(`
-                *,
-                productos:productos(count)
-            `)
+            .select('*')
             .order('nombre');
         
-        if (error) {
-            console.error('Error cargando categorías:', error);
-            grid.innerHTML = '<div class="inv-empty"><i class="fas fa-exclamation-triangle"></i><p>Error al cargar categorías</p></div>';
-            return;
-        }
+        if (catError) throw catError;
+        
+        // Obtener conteo real de productos
+        const conteoMap = await obtenerConteoProductos();
         
         if (!categorias || categorias.length === 0) {
             grid.innerHTML = '<div class="inv-empty"><i class="fas fa-folder-open"></i><p>No hay categorías disponibles</p></div>';
@@ -766,7 +856,7 @@ async function renderCategoryGrid() {
         }
         
         grid.innerHTML = categorias.map(cat => {
-            const count = cat.productos?.[0]?.count || 0;
+            const count = conteoMap[cat.id] || 0;
             return `
             <div class="category-card" onclick="showProductView(${cat.id})" style="--cat-color:${cat.color || '#37474f'}">
                 <div class="category-card-icon">
@@ -782,6 +872,8 @@ async function renderCategoryGrid() {
         grid.innerHTML = '<div class="inv-empty"><i class="fas fa-exclamation-circle"></i><p>Error al cargar datos</p></div>';
     }
 }
+
+
 
 async function showProductView(categoryId) {
     currentCategory = categoryId;
@@ -902,22 +994,25 @@ async function showAdminCategoryView() {
     document.getElementById('adminModalTitle').innerHTML = '<i class="fas fa-boxes"></i> Administrar Inventario';
     await renderAdminCategoryGrid();
 }
-
+// ============================================================
+// RENDERIZAR CATEGORÍAS EN ADMIN (CORREGIDO)
+// ============================================================
 async function renderAdminCategoryGrid() {
     const grid = document.getElementById('adminCategoryGrid');
     
     grid.innerHTML = '<div class="loading-spinner"><i class="fas fa-spinner fa-spin"></i> Cargando categorías...</div>';
     
     try {
+        // Obtener categorías
         const { data: categorias, error } = await supabaseClient
             .from('categorias')
-            .select(`
-                *,
-                productos:productos(count)
-            `)
+            .select('*')
             .order('nombre');
         
         if (error) throw error;
+        
+        // Obtener conteo real de productos
+        const conteoMap = await obtenerConteoProductos();
         
         if (!categorias || categorias.length === 0) {
             grid.innerHTML = '<div class="inv-empty"><i class="fas fa-folder-open"></i><p>No hay categorías disponibles</p></div>';
@@ -925,7 +1020,7 @@ async function renderAdminCategoryGrid() {
         }
         
         grid.innerHTML = categorias.map(cat => {
-            const count = cat.productos?.[0]?.count || 0;
+            const count = conteoMap[cat.id] || 0;
             return `
             <div class="category-card" onclick="showAdminProductView(${cat.id})" style="--cat-color:${cat.color || '#37474f'}">
                 <div class="category-card-icon">
@@ -968,6 +1063,9 @@ async function showAdminProductView(categoryId) {
     }
 }
 
+// ============================================================
+// RENDERIZAR PRODUCTOS EN ADMIN (CORREGIDO)
+// ============================================================
 async function renderAdminProductGrid(categoryId, searchQuery = '') {
     const grid = document.getElementById('adminProductsGrid');
     
@@ -1001,6 +1099,8 @@ async function renderAdminProductGrid(categoryId, searchQuery = '') {
         }
         
         grid.innerHTML = productos.map(p => {
+            // ESCAPAR COMILLAS del nombre del producto
+            const nombreEscapado = p.nombre.replace(/'/g, "\\'").replace(/"/g, '&quot;');
             const utilidad = p.precio - (p.precio_proveedor || 0);
             const porcentajeUtilidad = p.precio_proveedor > 0 ? ((utilidad / p.precio_proveedor) * 100).toFixed(1) : 0;
             
@@ -1045,7 +1145,7 @@ async function renderAdminProductGrid(categoryId, searchQuery = '') {
                     <button class="admin-btn-save" onclick="saveProductChanges(${p.id})">
                         <i class="fas fa-save"></i> Guardar
                     </button>
-                    <button class="admin-btn-delete" onclick="deleteProduct(${p.id}, '${p.nombre}')">
+                    <button class="admin-btn-delete" onclick="deleteProduct(${p.id}, '${nombreEscapado}')">
                         <i class="fas fa-trash"></i>
                     </button>
                 </div>
@@ -1061,6 +1161,7 @@ async function renderAdminProductGrid(categoryId, searchQuery = '') {
         grid.innerHTML = '<div class="inv-empty"><i class="fas fa-exclamation-circle"></i><p>Error al cargar productos</p></div>';
     }
 }
+
 
 function filterAdminProducts() {
     const query = document.getElementById('adminSearch').value.toLowerCase();
@@ -1107,6 +1208,9 @@ async function showAdminAddProductView() {
     }
 }
 
+// ============================================================
+// GUARDAR CAMBIOS (MODIFICADO PARA ACTUALIZAR CATEGORÍAS)
+// ============================================================
 async function saveProductChanges(productId) {
     const precio = parseFloat(document.getElementById(`price_${productId}`).value);
     const precioProveedor = parseFloat(document.getElementById(`price_prov_${productId}`).value);
@@ -1143,6 +1247,14 @@ async function saveProductChanges(productId) {
         
         alert('✅ Producto actualizado correctamente');
         
+        // ACTUALIZAR CONTADORES (por si cambió el stock)
+        if (document.getElementById('adminCategoryView').style.display === 'block') {
+            await renderAdminCategoryGrid();
+        }
+        if (document.getElementById('categoryView').style.display === 'block') {
+            await renderCategoryGrid();
+        }
+        
         if (adminCurrentCategory) {
             await renderAdminProductGrid(adminCurrentCategory);
         }
@@ -1153,8 +1265,14 @@ async function saveProductChanges(productId) {
     }
 }
 
+// ============================================================
+// ELIMINAR PRODUCTO (CORREGIDO)
+// ============================================================
 async function deleteProduct(productId, productName) {
-    if (!confirm(`¿Estás seguro de eliminar "${productName}"?`)) {
+    // Limpiar el nombre para mostrarlo correctamente
+    const nombreLimpio = productName.replace(/&quot;/g, '"');
+    
+    if (!confirm(`¿Estás seguro de eliminar "${nombreLimpio}"?`)) {
         return;
     }
     
@@ -1167,6 +1285,15 @@ async function deleteProduct(productId, productName) {
         if (error) throw error;
         
         alert('✅ Producto eliminado (desactivado) correctamente');
+        showNotification(`Producto "${nombreLimpio}" eliminado`, 'success');
+        
+        // ACTUALIZAR CONTADORES
+        if (document.getElementById('adminCategoryView').style.display === 'block') {
+            await renderAdminCategoryGrid(); // Actualizar categorías en admin
+        }
+        if (document.getElementById('categoryView').style.display === 'block') {
+            await renderCategoryGrid(); // Actualizar categorías en inventario
+        }
         
         if (adminCurrentCategory) {
             await renderAdminProductGrid(adminCurrentCategory);
@@ -1178,6 +1305,9 @@ async function deleteProduct(productId, productName) {
     }
 }
 
+// ============================================================
+// AGREGAR PRODUCTO (MODIFICADO PARA ACTUALIZAR CATEGORÍAS)
+// ============================================================
 document.getElementById('adminAddProductForm')?.addEventListener('submit', async function(e) {
     e.preventDefault();
     
@@ -1218,6 +1348,14 @@ document.getElementById('adminAddProductForm')?.addEventListener('submit', async
         } else {
             showAdminMessage('✅ Producto agregado correctamente', 'success');
             
+            // ACTUALIZAR CONTADORES
+            if (document.getElementById('adminCategoryView').style.display === 'block') {
+                await renderAdminCategoryGrid(); // Actualizar categorías en admin
+            }
+            if (document.getElementById('categoryView').style.display === 'block') {
+                await renderCategoryGrid(); // Actualizar categorías en inventario
+            }
+            
             setTimeout(() => {
                 if (adminCurrentCategory) {
                     showAdminProductView(adminCurrentCategory);
@@ -1231,6 +1369,8 @@ document.getElementById('adminAddProductForm')?.addEventListener('submit', async
         showAdminMessage('Error al conectar con Supabase', 'error');
     }
 });
+
+
 
 function showAdminMessage(text, type) {
     const msg = document.getElementById('adminMessage');
@@ -1608,8 +1748,8 @@ async function loadSalesByDate() {
     const fecha = document.getElementById('returnDate').value;
     if (!fecha) return;
     
-    const startDate = `${fecha}T00:00:00`;
-    const endDate = `${fecha}T23:59:59`;
+    const startDate = `${fecha}T05:00:00`;  // 5:00 AM
+    const endDate = `${fecha}T23:00:00`;    // 11:00 PM
     
     try {
         const { data: ventas, error } = await supabaseClient
@@ -1649,8 +1789,9 @@ async function loadSalesByDate() {
 }
 
 async function loadReturnsByDate(fecha) {
-    const startDate = `${fecha}T00:00:00`;
-    const endDate = `${fecha}T23:59:59`;
+   
+    const startDate = `${fecha}T05:00:00`;  // 5:00 AM
+    const endDate = `${fecha}T23:00:00`;    // 11:00 PM
     
     try {
         const { data: devoluciones, error } = await supabaseClient
@@ -1973,6 +2114,22 @@ function filterHistorial() {
         const texto = card.textContent.toLowerCase();
         card.style.display = texto.includes(query) ? '' : 'none';
     });
+}
+
+// ============================================================
+// DEBUG - VER ESTADO ACTUAL (AGREGAR AL FINAL)
+// ============================================================
+function verEstadoVenta() {
+    console.log('=== ESTADO DE VENTA ===');
+    console.log('Productos en venta:', productosEnVenta.length);
+    console.log('Detalles:', productosEnVenta.map(p => ({
+        id: p.id,
+        nombre: p.nombre,
+        cantidad: p.cantidad,
+        precio: p.precio
+    })));
+    console.log('Total:', document.getElementById('total')?.textContent);
+    console.log('=======================');
 }
 
 // ============================================================

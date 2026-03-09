@@ -5569,3 +5569,32 @@ tbody tr.highlight {
         justify-content: flex-end;
     }
 }
+
+/* Mejoras para la tabla de ventas */
+#salesBody tr {
+    transition: all 0.3s ease;
+}
+
+#salesBody tr.eliminando {
+    opacity: 0;
+    transform: translateX(-20px);
+}
+
+.delete-row-btn {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.delete-row-btn:hover {
+    transform: scale(1.1);
+}
+
+/* Estilo para cuando no hay productos */
+#salesBody:empty {
+    min-height: 200px;
+}
+
+/* Total siempre visible */
+.total-amount {
+    transition: all 0.3s ease;
+}
