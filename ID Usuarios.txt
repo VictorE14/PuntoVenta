@@ -1,3 +1,34 @@
+Puntos de Venta 
+-- ============================================================
+-- AGREGAR NUEVOS USUARIOS PARA PUNTO DE VENTA
+-- ============================================================
+
+-- Insertar un solo usuario
+INSERT INTO usuarios_venta (username, password, nombre) 
+VALUES ('Libano', 'FerreLIBANO', 'Alejandro Hernandez');
+
+-- Insertar varios usuarios a la vez
+INSERT INTO usuarios_venta (username, password, nombre) VALUES
+    ('cajero4', 'cajero123', 'Laura Sánchez'),
+    ('cajero5', 'cajero123', 'Pedro Ramírez'),
+    ('supervisor', 'super123', 'Supervisor de Turno');
+
+-- Verificar los usuarios insertados
+SELECT * FROM usuarios_venta ORDER BY id;
+
+
+Eliminar Usuario Punto de Venta 
+
+-- ELIMINAR permanentemente (¡CUIDADO! No podrás recuperarlo)
+DELETE FROM usuarios_venta 
+WHERE username = 'cajero1';
+
+-- Verificar que ya no existe
+SELECT * FROM usuarios_venta;
+
+
+
+
 -- Buscar el ID del usuario que acabas de crear (reemplaza con el email que usaste)
 SELECT id, email FROM auth.users WHERE email = 'tuzdzidzv@gmail.com';
 
@@ -41,3 +72,16 @@ END $$;
 
 -- Verificar el resultado
 SELECT * FROM admin_usuarios ORDER BY id DESC;
+
+
+
+Eliminar Administrador Ventas
+
+-- 1. Primero, verifica quiénes son los administradores actuales
+SELECT id, username, nombre, activo FROM admin_usuarios;
+
+-- 2. Eliminar al administrador específico (reemplaza 'admin2' con el username real)
+DELETE FROM admin_usuarios WHERE username = '';
+
+-- 3. Verificar que ya no existe
+SELECT * FROM admin_usuarios WHERE username = 'admin';

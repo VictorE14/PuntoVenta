@@ -9,573 +9,611 @@
 </head>
 <body>
 
-    <div class="header">
-        <div class="header-logo">
-            <div class="logo-icon"><i class="fas fa-hammer"></i></div>
-            <div class="logo-text">
-                <span class="store-name">Ferretería Libano</span>
-                <span class="store-subtitle">Punto de Venta</span>
-            </div>
-        </div>
-        <div class="header-datetime">
-            <div class="datetime-item">
-                <i class="fas fa-calendar-alt"></i>
-                <input type="text" id="date" readonly>
-            </div>
-            <div class="datetime-item">
-                <i class="fas fa-clock"></i>
-                <input type="text" id="time" readonly>
-            </div>
-        </div>
-        <!-- BOTÓN ADMIN -->
-        <button class="btn btn-primary btn-admin" onclick="showLoginModal()">
-            <i class="fas fa-cogs"></i> Admin Inventario
-        </button>
-    </div>
-
     <!-- =================================================== -->
-    <!-- MODAL DE LOGIN -->
+    <!-- PANTALLA DE LOGIN INICIAL (SIEMPRE VISIBLE AL INICIO) -->
     <!-- =================================================== -->
-    <div id="loginModal" class="modal">
-        <div class="modal-content modal-small">
-            <div class="modal-header">
-                <h2><i class="fas fa-lock"></i> Acceso Administrador</h2>
-                <span class="close" onclick="closeLoginModal()"><i class="fas fa-times"></i></span>
-            </div>
-            <div class="login-body">
-                <div class="login-icon">
-                    <i class="fas fa-user-shield"></i>
+    <div id="loginScreen" class="login-screen">
+        <div class="login-container">
+            <div class="login-box">
+                <div class="login-logo">
+                    <i class="fas fa-hammer"></i>
                 </div>
+                <h1>Ferretería Libano</h1>
+                <p class="login-subtitle">Punto de Venta</p>
+                
                 <div class="login-form">
-                    <div class="form-group">
-                        <label for="loginUsername"><i class="fas fa-user"></i> Usuario</label>
-                        <input type="text" id="loginUsername" placeholder="Ingresa tu usuario" autocomplete="off">
+                    <div class="input-group">
+                        <i class="fas fa-user"></i>
+                        <input type="text" id="loginUsername" placeholder="Usuario" autocomplete="off">
                     </div>
-                    <div class="form-group">
-                        <label for="loginPassword"><i class="fas fa-key"></i> Contraseña</label>
-                        <input type="password" id="loginPassword" placeholder="Ingresa tu contraseña" onkeypress="handleKeyPress(event)">
+                    <div class="input-group">
+                        <i class="fas fa-lock"></i>
+                        <input type="password" id="loginPassword" placeholder="Contraseña" onkeypress="handleKeyPress(event)">
                     </div>
-                    <div id="loginError" class="login-error" style="display:none;">
+                    
+                    <div id="loginError" class="login-error-message" style="display:none;">
                         <i class="fas fa-exclamation-circle"></i>
                         <span>Usuario o contraseña incorrectos</span>
                     </div>
-                    <button class="btn btn-primary login-btn" onclick="attemptLogin()">
-                        <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+                    
+                    <button class="login-button" onclick="attemptLogin()">
+                        <i class="fas fa-sign-in-alt"></i> Ingresar al Sistema
                     </button>
                 </div>
+                
                 <div class="login-footer">
-                    <small>Solo personal autorizado</small>
+                    <small>© 2026 Ferretería Libano - Todos los derechos reservados</small>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="search-section">
-        <div class="search-wrapper">
-            <i class="fas fa-search search-icon"></i>
-            <input type="text" id="searchInput" placeholder="Buscar por código, nombre o marca..." autocomplete="off">
-            <div id="searchSuggestions" class="suggestions-dropdown"></div>
-        </div>
-        <button class="btn btn-primary" onclick="openInventoryModal()">
-            <i class="fas fa-boxes"></i> Inventario
-        </button>
-    </div>
-
-<div class="table-container">
-    <table id="salesTable">
-        <thead>
-            <tr>
-                <th>No.</th>
-                <th>Marca</th>
-                <th>Artículo</th>
-                <th>Código</th>
-                <th>Cantidad</th>
-                <th>Precio Unit.</th>
-                <th>Subtotal</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody id="salesBody">
-            <!-- Las filas se insertan aquí dinámicamente -->
-        </tbody>
-    </table>
-    <div class="empty-state" id="emptyState">
-        <i class="fas fa-shopping-cart"></i>
-        <p>No hay productos en la venta</p>
-        <small>Busca o selecciona productos del inventario</small>
-    </div>
-</div>
-
-    <div class="footer">
-        <div class="footer-buttons">
-            <button class="btn btn-secondary" onclick="clearAll()">
-                <i class="fas fa-broom"></i> Limpiar
-            </button>
-            <button class="btn btn-warning" onclick="showReturnModal()">
-                <i class="fas fa-undo"></i> Devolución
-            </button>
-            <!-- BOTÓN DE CORTE DEL DÍA -->
-            <button class="btn btn-info" onclick="showCorteModal()">
-                <i class="fas fa-chart-bar"></i> Corte del Día
-            </button>
-            <button class="btn btn-success" onclick="pay()">
-                <i class="fas fa-cash-register"></i> Pagar
-            </button>
-        </div>
-        <div class="total-box">
-            <span class="total-label">TOTAL</span>
-            <span class="total-amount" id="total">$0.00</span>
-        </div>
-    </div>
-
-    <!-- Modal Método de Pago -->
-    <div id="paymentModal" class="modal">
-        <div class="modal-content modal-small">
-            <div class="modal-header">
-                <h2><i class="fas fa-cash-register"></i> Método de Pago</h2>
-                <span class="close" onclick="closePaymentModal()"><i class="fas fa-times"></i></span>
+    <!-- =================================================== -->
+    <!-- CONTENIDO PRINCIPAL (OCULTO HASTA LOGIN EXITOSO) -->
+    <!-- =================================================== -->
+    <div id="mainContent" style="display: none;">
+        
+        <!-- =================================================== -->
+        <!-- HEADER CON INFORMACIÓN DE USUARIO -->
+        <!-- =================================================== -->
+        <div class="header">
+            <div class="header-logo">
+                <div class="logo-icon"><i class="fas fa-hammer"></i></div>
+                <div class="logo-text">
+                    <span class="store-name">Ferretería Libano</span>
+                    <span class="store-subtitle">Punto de Venta</span>
+                </div>
             </div>
-            <div class="payment-body">
-                <div class="payment-total-display">
-                    <span class="payment-total-label">Total a cobrar</span>
-                    <span class="payment-total-value" id="paymentTotalDisplay">$0.00</span>
+            <div class="header-datetime">
+                <div class="datetime-item">
+                    <i class="fas fa-calendar-alt"></i>
+                    <input type="text" id="date" readonly>
                 </div>
-                <div class="payment-methods">
-                    <button class="payment-method-btn" id="btnEfectivo" onclick="selectPaymentMethod('efectivo')">
-                        <i class="fas fa-money-bill-wave"></i>
-                        <span>Efectivo</span>
-                    </button>
-                    <button class="payment-method-btn" id="btnTarjeta" onclick="selectPaymentMethod('tarjeta')">
-                        <i class="fas fa-credit-card"></i>
-                        <span>Tarjeta</span>
-                    </button>
+                <div class="datetime-item">
+                    <i class="fas fa-clock"></i>
+                    <input type="text" id="time" readonly>
                 </div>
-                <div id="cashSection" class="cash-section" style="display:none;">
-                    <label class="cash-label">Monto recibido</label>
-                    <div class="cash-input-wrapper">
-                        <span class="cash-prefix">$</span>
-                        <input type="number" id="cashReceived" placeholder="0.00" min="0" step="0.01" oninput="calculateChange()">
-                    </div>
-                    <div class="change-display" id="changeDisplay" style="display:none;">
-                        <span class="change-label">Cambio a devolver</span>
-                        <span class="change-value" id="changeValue">$0.00</span>
-                    </div>
-                    <div class="change-error" id="changeError" style="display:none;">
-                        <i class="fas fa-exclamation-triangle"></i> Monto insuficiente
-                    </div>
-                </div>
-                <div id="cardSection" class="card-section" style="display:none;">
-                    <div class="card-info">
-                        <i class="fas fa-check-circle"></i>
-                        <span>Pago con tarjeta. Confirma cuando el terminal lo apruebe.</span>
-                    </div>
-                </div>
-                <button class="btn btn-success confirm-pay-btn" id="confirmPayBtn" onclick="confirmPayment()" disabled>
-                    <i class="fas fa-check"></i> Confirmar Pago
+            </div>
+            <!-- Botón Admin con icono de usuario y opción de cerrar sesión -->
+            <div class="header-user">
+                <span class="user-info" id="userInfoDisplay">
+                    <i class="fas fa-user-circle"></i>
+                    <span id="currentUserName">Usuario</span>
+                </span>
+                <button class="btn btn-primary btn-admin" onclick="showLoginModal()">
+                    <i class="fas fa-cogs"></i> Admin
+                </button>
+                <button class="btn btn-danger btn-logout-header" onclick="logoutFromSystem()" title="Cerrar sesión">
+                    <i class="fas fa-sign-out-alt"></i>
                 </button>
             </div>
         </div>
-    </div>
 
-    <!-- Modal Inventario -->
-    <div id="inventoryModal" class="modal">
-        <div class="modal-content modal-large">
-            <div class="modal-header">
-                <h2 id="inventoryModalTitle"><i class="fas fa-boxes"></i> Catálogo de Productos</h2>
-                <span class="close" onclick="closeInventoryModal()"><i class="fas fa-times"></i></span>
+        <!-- =================================================== -->
+        <!-- BARRA DE BÚSQUEDA -->
+        <!-- =================================================== -->
+        <div class="search-section">
+            <div class="search-wrapper">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="searchInput" placeholder="Buscar por código, nombre o marca..." autocomplete="off">
+                <div id="searchSuggestions" class="suggestions-dropdown"></div>
             </div>
-            <div id="categoryView">
-                <div class="category-grid" id="categoryGrid"></div>
-            </div>
-            <div id="productView" style="display:none;">
-                <div class="product-view-header">
-                    <button class="btn btn-secondary btn-back" onclick="showCategoryView()">
-                        <i class="fas fa-arrow-left"></i> Categorías
-                    </button>
-                    <span class="product-view-title" id="currentCategoryLabel"></span>
-                </div>
-                <div class="modal-search">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="inventorySearch" placeholder="Filtrar productos..." oninput="filterInventory()">
-                </div>
-                <div class="inventory-grid" id="inventoryGrid"></div>
+            <button class="btn btn-primary" onclick="openInventoryModal()">
+                <i class="fas fa-boxes"></i> Inventario
+            </button>
+        </div>
+
+        <!-- =================================================== -->
+        <!-- TABLA DE VENTAS -->
+        <!-- =================================================== -->
+        <div class="table-container">
+            <table id="salesTable">
+                <thead>
+                    <tr>
+                        <th>No.</th>
+                        <th>Marca</th>
+                        <th>Artículo</th>
+                        <th>Código</th>
+                        <th>Cantidad</th>
+                        <th>Precio Unit.</th>
+                        <th>Subtotal</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody id="salesBody"></tbody>
+            </table>
+            <div class="empty-state" id="emptyState">
+                <i class="fas fa-shopping-cart"></i>
+                <p>No hay productos en la venta</p>
+                <small>Busca o selecciona productos del inventario</small>
             </div>
         </div>
-    </div>
 
-    <!-- =================================================== -->
-    <!-- MODAL DEVOLUCIONES POR DÍA -->
-    <!-- =================================================== -->
-    <div id="returnModal" class="modal">
-        <div class="modal-content modal-large">
-            <div class="modal-header">
-                <h2><i class="fas fa-undo"></i> Devoluciones por Día</h2>
-                <span class="close" onclick="closeReturnModal()"><i class="fas fa-times"></i></span>
-            </div>
-            
-            <!-- Selector de fecha -->
-            <div class="return-date-selector">
-                <div class="date-picker">
-                    <label for="returnDate"><i class="fas fa-calendar-alt"></i> Seleccionar fecha:</label>
-                    <input type="date" id="returnDate" onchange="loadSalesByDate()">
-                </div>
-                <div class="date-summary" id="dateSummary">
-                    <span class="summary-item">
-                        <i class="fas fa-shopping-cart"></i>
-                        <span id="totalVentasDia">0</span> ventas
-                    </span>
-                    <span class="summary-item">
-                        <i class="fas fa-undo"></i>
-                        <span id="totalDevueltoDia">$0.00</span> devuelto
-                    </span>
-                </div>
-            </div>
-
-            <!-- Tabs: Ventas del día / Historial de devoluciones -->
-            <div class="return-tabs">
-                <button class="tab-btn active" onclick="switchReturnTab('ventas')">
-                    <i class="fas fa-receipt"></i> Ventas del día
+        <!-- =================================================== -->
+        <!-- FOOTER CON BOTONES Y TOTAL -->
+        <!-- =================================================== -->
+        <div class="footer">
+            <div class="footer-buttons">
+                <button class="btn btn-secondary" onclick="clearAll()">
+                    <i class="fas fa-broom"></i> Limpiar
                 </button>
-                <button class="tab-btn" onclick="switchReturnTab('historial')">
-                    <i class="fas fa-history"></i> Historial de devoluciones
+                <button class="btn btn-warning" onclick="showReturnModal()">
+                    <i class="fas fa-undo"></i> Devolución
+                </button>
+                <button class="btn btn-info" onclick="showCorteModal()">
+                    <i class="fas fa-chart-bar"></i> Corte del Día
+                </button>
+                <button class="btn btn-success" onclick="pay()">
+                    <i class="fas fa-cash-register"></i> Pagar
                 </button>
             </div>
-
-            <!-- Panel: Ventas del día -->
-            <div id="ventasDiaPanel" class="tab-panel active">
-                <div class="return-search-section">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="ventasDiaSearch" placeholder="Buscar en ventas del día..." oninput="filterVentasDia()">
-                </div>
-                <div class="ventas-dia-container" id="ventasDiaContainer">
-                    <!-- Se carga dinámicamente -->
-                </div>
-                <div class="return-actions">
-                    <button class="btn btn-success" onclick="procesarDevolucionesSeleccionadas()">
-                        <i class="fas fa-check"></i> Procesar devoluciones seleccionadas
-                    </button>
-                    <span class="selected-count" id="selectedCount">0 productos seleccionados</span>
-                </div>
-            </div>
-
-            <!-- Panel: Historial de devoluciones -->
-            <div id="historialPanel" class="tab-panel">
-                <div class="return-search-section">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="historialSearch" placeholder="Buscar en historial..." oninput="filterHistorial()">
-                </div>
-                <div class="historial-container" id="historialContainer">
-                    <!-- Se carga dinámicamente -->
-                </div>
+            <div class="total-box">
+                <span class="total-label">TOTAL</span>
+                <span class="total-amount" id="total">$0.00</span>
             </div>
         </div>
-    </div>
 
-    <!-- =================================================== -->
-    <!-- MODAL ADMIN INVENTARIO (ACTUALIZADO) -->
-    <!-- =================================================== -->
-    <div id="adminModal" class="modal">
-        <div class="modal-content modal-large">
-            <div class="modal-header">
-                <h2 id="adminModalTitle"><i class="fas fa-boxes"></i> Administrar Inventario</h2>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <!-- BOTÓN DE REPORTE DE STOCK MÍNIMO -->
-                    <button class="btn btn-warning btn-sm" onclick="showReporteStockModal()" title="Reporte de stock mínimo">
-                        <i class="fas fa-exclamation-triangle"></i> Stock Mínimo
-                    </button>
-                    
-                    <!-- Badge de usuario -->
-                    <span class="admin-user-badge" id="adminUserBadge">
-                        <i class="fas fa-user-shield"></i> 
-                        <span id="currentAdminName">Administrador</span>
-                    </span>
-                    <!-- Botón de logout -->
-                    <button class="btn btn-sm btn-logout" onclick="logout(true)" title="Cerrar sesión">
-                        <i class="fas fa-sign-out-alt"></i> Salir
-                    </button>
-                    <span class="close" onclick="closeAdminModal()"><i class="fas fa-times"></i></span>
+        <!-- =================================================== -->
+        <!-- MODAL DE LOGIN PARA ADMIN -->
+        <!-- =================================================== -->
+        <div id="loginModal" class="modal">
+            <div class="modal-content modal-small">
+                <div class="modal-header">
+                    <h2><i class="fas fa-lock"></i> Acceso Administrador</h2>
+                    <span class="close" onclick="closeLoginModal()"><i class="fas fa-times"></i></span>
                 </div>
-            </div>
-            
-            <!-- VISTA DE CATEGORÍAS -->
-            <div id="adminCategoryView">
-                <div class="admin-view-header">
-                    <span class="product-view-title">Selecciona una categoría para administrar productos</span>
-                </div>
-                <div class="category-grid" id="adminCategoryGrid"></div>
-            </div>
-            
-            <!-- VISTA DE PRODUCTOS POR CATEGORÍA -->
-            <div id="adminProductView" style="display:none;">
-                <div class="admin-view-header">
-                    <button class="btn btn-secondary btn-back" onclick="showAdminCategoryView()">
-                        <i class="fas fa-arrow-left"></i> Categorías
-                    </button>
-                    <span class="product-view-title" id="currentAdminCategoryLabel"></span>
-                    <button class="btn btn-success btn-add" onclick="showAdminAddProductView()">
-                        <i class="fas fa-plus"></i> Nuevo Producto
-                    </button>
-                </div>
-                <div class="modal-search">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="adminSearch" placeholder="Filtrar productos por nombre, código o marca..." oninput="filterAdminProducts()">
-                </div>
-                <div class="admin-product-grid" id="adminProductsGrid"></div>
-            </div>
-            
-            <!-- VISTA PARA AGREGAR NUEVO PRODUCTO (CON PRECIO PROVEEDOR) -->
-            <div id="adminAddProductView" style="display:none;">
-                <div class="admin-view-header">
-                    <button class="btn btn-secondary btn-back" onclick="showAdminProductView(adminCurrentCategory)">
-                        <i class="fas fa-arrow-left"></i> Volver
-                    </button>
-                    <span class="product-view-title">Agregar Nuevo Producto</span>
-                </div>
-                <div class="form-container">
-                    <form id="adminAddProductForm">
-                        <div class="form-row">
-                            <div class="form-group half">
-                                <label for="adminProdCode">Código (único) *</label>
-                                <input type="text" id="adminProdCode" required placeholder="Ej: 016">
-                            </div>
-                            <div class="form-group half">
-                                <label for="adminProdCategory">Categoría *</label>
-                                <select id="adminProdCategory" required></select>
-                            </div>
-                        </div>
-                        
+                <div class="login-body">
+                    <div class="login-icon">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <div class="login-form">
                         <div class="form-group">
-                            <label for="adminProdName">Nombre del producto *</label>
-                            <input type="text" id="adminProdName" required placeholder="Ej: Sierra circular">
+                            <label for="adminUsername"><i class="fas fa-user"></i> Usuario</label>
+                            <input type="text" id="adminUsername" placeholder="Ingresa tu usuario" autocomplete="off">
                         </div>
-                        
                         <div class="form-group">
-                            <label for="adminProdBrand">Marca</label>
-                            <input type="text" id="adminProdBrand" placeholder="Ej: Truper">
+                            <label for="adminPassword"><i class="fas fa-key"></i> Contraseña</label>
+                            <input type="password" id="adminPassword" placeholder="Ingresa tu contraseña" onkeypress="handleAdminKeyPress(event)">
                         </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group half">
-                                <label for="adminProdPrice">Precio Público (MXN) *</label>
-                                <input type="number" id="adminProdPrice" min="0" step="0.01" required placeholder="0.00">
-                            </div>
-                            <div class="form-group half">
-                                <label for="adminProdPriceProveedor">Precio Proveedor (MXN) *</label>
-                                <input type="number" id="adminProdPriceProveedor" min="0" step="0.01" required placeholder="0.00" value="0">
-                            </div>
+                        <div id="adminLoginError" class="login-error" style="display:none;">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <span>Usuario o contraseña incorrectos</span>
                         </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group half">
-                                <label for="adminProdStock">Stock Inicial *</label>
-                                <input type="number" id="adminProdStock" min="0" required value="0">
-                            </div>
-                            <div class="form-group half">
-                                <label for="adminProdMinStock">Stock Mínimo *</label>
-                                <input type="number" id="adminProdMinStock" min="1" required value="1">
-                            </div>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-success btn-block">
-                            <i class="fas fa-plus"></i> Agregar Producto
+                        <button class="btn btn-primary login-btn" onclick="attemptAdminLogin()">
+                            <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
                         </button>
-                    </form>
-                    <div id="adminMessage" class="admin-message"></div>
+                    </div>
+                    <div class="login-footer">
+                        <small>Acceso restringido a administradores</small>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
 
-    <!-- =================================================== -->
-    <!-- MODAL REPORTE DE STOCK MÍNIMO (NUEVO) -->
-    <!-- =================================================== -->
-    <div id="reporteStockModal" class="modal">
-        <div class="modal-content modal-large">
-            <div class="modal-header" style="background: linear-gradient(135deg, #f57c00, #e65100);">
-                <h2><i class="fas fa-exclamation-triangle"></i> Reporte de Stock Mínimo</h2>
-                <span class="close" onclick="closeReporteStockModal()"><i class="fas fa-times"></i></span>
-            </div>
-            
-            <div class="reporte-body">
-                <div class="reporte-filtros">
-                    <div class="filtro-group">
-                        <label for="reporteFecha"><i class="fas fa-calendar-alt"></i> Productos actualizados hasta:</label>
-                        <input type="date" id="reporteFecha">
+        <!-- =================================================== -->
+        <!-- MODAL MÉTODO DE PAGO -->
+        <!-- =================================================== -->
+        <div id="paymentModal" class="modal">
+            <div class="modal-content modal-small">
+                <div class="modal-header">
+                    <h2><i class="fas fa-cash-register"></i> Método de Pago</h2>
+                    <span class="close" onclick="closePaymentModal()"><i class="fas fa-times"></i></span>
+                </div>
+                <div class="payment-body">
+                    <div class="payment-total-display">
+                        <span class="payment-total-label">Total a cobrar</span>
+                        <span class="payment-total-value" id="paymentTotalDisplay">$0.00</span>
                     </div>
-                    <div class="filtro-group">
-                        <label for="reporteCategoria"><i class="fas fa-tag"></i> Categoría:</label>
-                        <select id="reporteCategoria">
-                            <option value="todas">Todas las categorías</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="reporte-resumen" id="reporteResumen">
-                    <span class="resumen-item">
-                        <i class="fas fa-box"></i> Productos con stock bajo: <strong id="totalProductosBajo">0</strong>
-                    </span>
-                    <span class="resumen-item">
-                        <i class="fas fa-dollar-sign"></i> Costo total reposición: <strong id="totalCostoReposicion">$0.00</strong>
-                    </span>
-                </div>
-                
-                <div class="reporte-tabla-container">
-                    <table id="reporteStockTable">
-                        <thead>
-                            <tr>
-                                <th>Código</th>
-                                <th>Producto</th>
-                                <th>Marca</th>
-                                <th>Categoría</th>
-                                <th>Stock Actual</th>
-                                <th>Stock Mínimo</th>
-                                <th>Precio Proveedor</th>
-                                <th>Costo Reposición</th>
-                                <th>Estado</th> <!-- NUEVA COLUMNA -->
-                            </tr>
-                        </thead>
-                        <tbody id="reporteStockBody">
-                            <!-- Se carga dinámicamente -->
-                        </tbody>
-                        <tfoot id="reporteStockFoot">
-                            <tr>
-                                <td colspan="7" style="text-align: right; font-weight: bold;">TOTAL:</td>
-                                <td id="reporteTotalFoot" style="font-weight: bold; color: #00695c;">$0.00</td>
-                            </tr>
-                        </tfoot>
-                    </table>
-                </div>
-                
-                <div class="reporte-acciones">
-                    <button class="btn btn-primary" onclick="exportarReporteStockPDF()">
-                        <i class="fas fa-file-pdf"></i> Exportar a PDF
-                    </button>
-                    <button class="btn btn-secondary" onclick="cargarReporteStock()">
-                        <i class="fas fa-sync-alt"></i> Actualizar
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- =================================================== -->
-    <!-- MODAL CORTE DE CAJA -->
-    <!-- =================================================== -->
-    <div id="corteModal" class="modal">
-        <div class="modal-content modal-large">
-            <div class="modal-header" style="background: linear-gradient(135deg, #37474f, #455a64);">
-                <h2><i class="fas fa-chart-bar"></i> Corte de Caja</h2>
-                <span class="close" onclick="closeCorteModal()"><i class="fas fa-times"></i></span>
-            </div>
-            
-            <div class="corte-body">
-                <!-- Selector de fecha -->
-                <div class="corte-date-selector">
-                    <div class="date-picker">
-                        <label for="corteDate"><i class="fas fa-calendar-alt"></i> Fecha:</label>
-                        <input type="date" id="corteDate" onchange="loadCorteData()">
-                    </div>
-                    <button class="btn btn-primary" onclick="exportCortePDF()">
-                        <i class="fas fa-file-pdf"></i> Exportar PDF
-                    </button>
-                </div>
-                
-                <!-- Resumen del corte -->
-                <div class="corte-resumen">
-                    <div class="resumen-card total-ventas">
-                        <div class="resumen-icon">
-                            <i class="fas fa-shopping-cart"></i>
-                        </div>
-                        <div class="resumen-info">
-                            <span class="resumen-label">Total Ventas</span>
-                            <span class="resumen-value" id="corteTotalVentas">$0.00</span>
-                        </div>
-                    </div>
-                    
-                    <div class="resumen-card total-efectivo">
-                        <div class="resumen-icon">
+                    <div class="payment-methods">
+                        <button class="payment-method-btn" id="btnEfectivo" onclick="selectPaymentMethod('efectivo')">
                             <i class="fas fa-money-bill-wave"></i>
-                        </div>
-                        <div class="resumen-info">
-                            <span class="resumen-label">Efectivo</span>
-                            <span class="resumen-value" id="corteTotalEfectivo">$0.00</span>
-                        </div>
-                    </div>
-                    
-                    <div class="resumen-card total-tarjeta">
-                        <div class="resumen-icon">
+                            <span>Efectivo</span>
+                        </button>
+                        <button class="payment-method-btn" id="btnTarjeta" onclick="selectPaymentMethod('tarjeta')">
                             <i class="fas fa-credit-card"></i>
+                            <span>Tarjeta</span>
+                        </button>
+                    </div>
+                    <div id="cashSection" class="cash-section" style="display:none;">
+                        <label class="cash-label">Monto recibido</label>
+                        <div class="cash-input-wrapper">
+                            <span class="cash-prefix">$</span>
+                            <input type="number" id="cashReceived" placeholder="0.00" min="0" step="0.01" oninput="calculateChange()">
                         </div>
-                        <div class="resumen-info">
-                            <span class="resumen-label">Tarjeta</span>
-                            <span class="resumen-value" id="corteTotalTarjeta">$0.00</span>
+                        <div class="change-display" id="changeDisplay" style="display:none;">
+                            <span class="change-label">Cambio a devolver</span>
+                            <span class="change-value" id="changeValue">$0.00</span>
+                        </div>
+                        <div class="change-error" id="changeError" style="display:none;">
+                            <i class="fas fa-exclamation-triangle"></i> Monto insuficiente
                         </div>
                     </div>
-                    
-                    <div class="resumen-card total-devoluciones">
-                        <div class="resumen-icon">
+                    <div id="cardSection" class="card-section" style="display:none;">
+                        <div class="card-info">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Pago con tarjeta. Confirma cuando el terminal lo apruebe.</span>
+                        </div>
+                    </div>
+                    <button class="btn btn-success confirm-pay-btn" id="confirmPayBtn" onclick="confirmPayment()" disabled>
+                        <i class="fas fa-check"></i> Confirmar Pago
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- =================================================== -->
+        <!-- MODAL INVENTARIO -->
+        <!-- =================================================== -->
+        <div id="inventoryModal" class="modal">
+            <div class="modal-content modal-large">
+                <div class="modal-header">
+                    <h2 id="inventoryModalTitle"><i class="fas fa-boxes"></i> Catálogo de Productos</h2>
+                    <span class="close" onclick="closeInventoryModal()"><i class="fas fa-times"></i></span>
+                </div>
+                <div id="categoryView">
+                    <div class="category-grid" id="categoryGrid"></div>
+                </div>
+                <div id="productView" style="display:none;">
+                    <div class="product-view-header">
+                        <button class="btn btn-secondary btn-back" onclick="showCategoryView()">
+                            <i class="fas fa-arrow-left"></i> Categorías
+                        </button>
+                        <span class="product-view-title" id="currentCategoryLabel"></span>
+                    </div>
+                    <div class="modal-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="inventorySearch" placeholder="Filtrar productos..." oninput="filterInventory()">
+                    </div>
+                    <div class="inventory-grid" id="inventoryGrid"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =================================================== -->
+        <!-- MODAL DEVOLUCIONES POR DÍA -->
+        <!-- =================================================== -->
+        <div id="returnModal" class="modal">
+            <div class="modal-content modal-large">
+                <div class="modal-header">
+                    <h2><i class="fas fa-undo"></i> Devoluciones por Día</h2>
+                    <span class="close" onclick="closeReturnModal()"><i class="fas fa-times"></i></span>
+                </div>
+                
+                <div class="return-date-selector">
+                    <div class="date-picker">
+                        <label for="returnDate"><i class="fas fa-calendar-alt"></i> Seleccionar fecha:</label>
+                        <input type="date" id="returnDate" onchange="loadSalesByDate()">
+                    </div>
+                    <div class="date-summary" id="dateSummary">
+                        <span class="summary-item">
+                            <i class="fas fa-shopping-cart"></i>
+                            <span id="totalVentasDia">0</span> ventas
+                        </span>
+                        <span class="summary-item">
                             <i class="fas fa-undo"></i>
-                        </div>
-                        <div class="resumen-info">
-                            <span class="resumen-label">Devoluciones</span>
-                            <span class="resumen-value" id="corteTotalDevoluciones">$0.00</span>
-                        </div>
+                            <span id="totalDevueltoDia">$0.00</span> devuelto
+                        </span>
                     </div>
                 </div>
-                
-                <!-- Estadísticas -->
-                <div class="corte-estadisticas">
-                    <div class="estadistica-item">
-                        <span class="estadistica-label">Número de ventas:</span>
-                        <span class="estadistica-value" id="corteNumVentas">0</span>
-                    </div>
-                    <div class="estadistica-item">
-                        <span class="estadistica-label">Ticket promedio:</span>
-                        <span class="estadistica-value" id="corteTicketPromedio">$0.00</span>
-                    </div>
-                    <div class="estadistica-item">
-                        <span class="estadistica-label">Productos vendidos:</span>
-                        <span class="estadistica-value" id="corteProductosVendidos">0</span>
-                    </div>
-                </div>
-                
-                <!-- Tabs: Ventas / Devoluciones -->
-                <div class="corte-tabs">
-                    <button class="corte-tab-btn active" onclick="switchCorteTab('ventas')">
+
+                <div class="return-tabs">
+                    <button class="tab-btn active" onclick="switchReturnTab('ventas')">
                         <i class="fas fa-receipt"></i> Ventas del día
                     </button>
-                    <button class="corte-tab-btn" onclick="switchCorteTab('devoluciones')">
-                        <i class="fas fa-undo"></i> Devoluciones del día
+                    <button class="tab-btn" onclick="switchReturnTab('historial')">
+                        <i class="fas fa-history"></i> Historial de devoluciones
                     </button>
                 </div>
-                
-                <!-- Panel de ventas -->
-                <div id="corteVentasPanel" class="corte-panel active">
-                    <div class="corte-search">
+
+                <div id="ventasDiaPanel" class="tab-panel active">
+                    <div class="return-search-section">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="corteVentasSearch" placeholder="Buscar en ventas..." oninput="filterCorteVentas()">
+                        <input type="text" id="ventasDiaSearch" placeholder="Buscar en ventas del día..." oninput="filterVentasDia()">
                     </div>
-                    <div class="corte-ventas-lista" id="corteVentasLista">
-                        <!-- Se carga dinámicamente -->
+                    <div class="ventas-dia-container" id="ventasDiaContainer"></div>
+                    <div class="return-actions">
+                        <button class="btn btn-success" onclick="procesarDevolucionesSeleccionadas()">
+                            <i class="fas fa-check"></i> Procesar devoluciones seleccionadas
+                        </button>
+                        <span class="selected-count" id="selectedCount">0 productos seleccionados</span>
+                    </div>
+                </div>
+
+                <div id="historialPanel" class="tab-panel">
+                    <div class="return-search-section">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="historialSearch" placeholder="Buscar en historial..." oninput="filterHistorial()">
+                    </div>
+                    <div class="historial-container" id="historialContainer"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =================================================== -->
+        <!-- MODAL ADMIN INVENTARIO -->
+        <!-- =================================================== -->
+        <div id="adminModal" class="modal">
+            <div class="modal-content modal-large">
+                <div class="modal-header">
+                    <h2 id="adminModalTitle"><i class="fas fa-boxes"></i> Administrar Inventario</h2>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button class="btn btn-warning btn-sm" onclick="showReporteStockModal()" title="Reporte de stock mínimo">
+                            <i class="fas fa-exclamation-triangle"></i> Stock Mínimo
+                        </button>
+                        
+                        <span class="admin-user-badge" id="adminUserBadge">
+                            <i class="fas fa-user-shield"></i> 
+                            <span id="currentAdminName">Administrador</span>
+                        </span>
+                        <button class="btn btn-sm btn-logout" onclick="logout(true)" title="Cerrar sesión">
+                            <i class="fas fa-sign-out-alt"></i> Salir
+                        </button>
+                        <span class="close" onclick="closeAdminModal()"><i class="fas fa-times"></i></span>
                     </div>
                 </div>
                 
-                <!-- Panel de devoluciones -->
-                <div id="corteDevolucionesPanel" class="corte-panel">
-                    <div class="corte-search">
-                        <i class="fas fa-search"></i>
-                        <input type="text" id="corteDevolucionesSearch" placeholder="Buscar en devoluciones..." oninput="filterCorteDevoluciones()">
+                <div id="adminCategoryView">
+                    <div class="admin-view-header">
+                        <span class="product-view-title">Selecciona una categoría para administrar productos</span>
                     </div>
-                    <div class="corte-devoluciones-lista" id="corteDevolucionesLista">
-                        <!-- Se carga dinámicamente -->
-                    </div>
+                    <div class="category-grid" id="adminCategoryGrid"></div>
                 </div>
                 
-                <!-- Historial de cortes anteriores -->
-                <div class="corte-historial">
-                    <h3><i class="fas fa-history"></i> Cortes anteriores</h3>
-                    <div class="historial-cortes-lista" id="historialCortesLista">
-                        <!-- Se carga dinámicamente -->
+                <div id="adminProductView" style="display:none;">
+                    <div class="admin-view-header">
+                        <button class="btn btn-secondary btn-back" onclick="showAdminCategoryView()">
+                            <i class="fas fa-arrow-left"></i> Categorías
+                        </button>
+                        <span class="product-view-title" id="currentAdminCategoryLabel"></span>
+                        <button class="btn btn-success btn-add" onclick="showAdminAddProductView()">
+                            <i class="fas fa-plus"></i> Nuevo Producto
+                        </button>
+                    </div>
+                    <div class="modal-search">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="adminSearch" placeholder="Filtrar productos por nombre, código o marca..." oninput="filterAdminProducts()">
+                    </div>
+                    <div class="admin-product-grid" id="adminProductsGrid"></div>
+                </div>
+                
+                <div id="adminAddProductView" style="display:none;">
+                    <div class="admin-view-header">
+                        <button class="btn btn-secondary btn-back" onclick="showAdminProductView(adminCurrentCategory)">
+                            <i class="fas fa-arrow-left"></i> Volver
+                        </button>
+                        <span class="product-view-title">Agregar Nuevo Producto</span>
+                    </div>
+                    <div class="form-container">
+                        <form id="adminAddProductForm">
+                            <div class="form-row">
+                                <div class="form-group half">
+                                    <label for="adminProdCode">Código (único) *</label>
+                                    <input type="text" id="adminProdCode" required placeholder="Ej: 016">
+                                </div>
+                                <div class="form-group half">
+                                    <label for="adminProdCategory">Categoría *</label>
+                                    <select id="adminProdCategory" required></select>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="adminProdName">Nombre del producto *</label>
+                                <input type="text" id="adminProdName" required placeholder="Ej: Sierra circular">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label for="adminProdBrand">Marca</label>
+                                <input type="text" id="adminProdBrand" placeholder="Ej: Truper">
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group half">
+                                    <label for="adminProdPrice">Precio Público (MXN) *</label>
+                                    <input type="number" id="adminProdPrice" min="0" step="0.01" required placeholder="0.00">
+                                </div>
+                                <div class="form-group half">
+                                    <label for="adminProdPriceProveedor">Precio Proveedor (MXN) *</label>
+                                    <input type="number" id="adminProdPriceProveedor" min="0" step="0.01" required placeholder="0.00" value="0">
+                                </div>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group half">
+                                    <label for="adminProdStock">Stock Inicial *</label>
+                                    <input type="number" id="adminProdStock" min="0" required value="0">
+                                </div>
+                                <div class="form-group half">
+                                    <label for="adminProdMinStock">Stock Mínimo *</label>
+                                    <input type="number" id="adminProdMinStock" min="1" required value="1">
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-success btn-block">
+                                <i class="fas fa-plus"></i> Agregar Producto
+                            </button>
+                        </form>
+                        <div id="adminMessage" class="admin-message"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =================================================== -->
+        <!-- MODAL REPORTE DE STOCK MÍNIMO -->
+        <!-- =================================================== -->
+        <div id="reporteStockModal" class="modal">
+            <div class="modal-content modal-large">
+                <div class="modal-header" style="background: linear-gradient(135deg, #f57c00, #e65100);">
+                    <h2><i class="fas fa-exclamation-triangle"></i> Reporte de Stock Mínimo</h2>
+                    <span class="close" onclick="closeReporteStockModal()"><i class="fas fa-times"></i></span>
+                </div>
+                
+                <div class="reporte-body">
+                    <div class="reporte-filtros">
+                        <div class="filtro-group">
+                            <label for="reporteFecha"><i class="fas fa-calendar-alt"></i> Productos actualizados hasta:</label>
+                            <input type="date" id="reporteFecha">
+                        </div>
+                        <div class="filtro-group">
+                            <label for="reporteCategoria"><i class="fas fa-tag"></i> Categoría:</label>
+                            <select id="reporteCategoria">
+                                <option value="todas">Todas las categorías</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="reporte-resumen" id="reporteResumen">
+                        <span class="resumen-item">
+                            <i class="fas fa-box"></i> Productos con stock bajo: <strong id="totalProductosBajo">0</strong>
+                        </span>
+                        <span class="resumen-item">
+                            <i class="fas fa-dollar-sign"></i> Costo total reposición: <strong id="totalCostoReposicion">$0.00</strong>
+                        </span>
+                    </div>
+                    
+                    <div class="reporte-tabla-container">
+                        <table id="reporteStockTable">
+                            <thead>
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Producto</th>
+                                    <th>Marca</th>
+                                    <th>Categoría</th>
+                                    <th>Stock Actual</th>
+                                    <th>Stock Mínimo</th>
+                                    <th>Precio Proveedor</th>
+                                    <th>Costo Reposición</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reporteStockBody"></tbody>
+                            <tfoot id="reporteStockFoot">
+                                <tr>
+                                    <td colspan="8" style="text-align: right; font-weight: bold;">TOTAL:</td>
+                                    <td id="reporteTotalFoot" style="font-weight: bold; color: #00695c;">$0.00</td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                    
+                    <div class="reporte-acciones">
+                        <button class="btn btn-primary" onclick="exportarReporteStockPDF()">
+                            <i class="fas fa-file-pdf"></i> Exportar a PDF
+                        </button>
+                        <button class="btn btn-secondary" onclick="cargarReporteStock()">
+                            <i class="fas fa-sync-alt"></i> Actualizar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- =================================================== -->
+        <!-- MODAL CORTE DE CAJA -->
+        <!-- =================================================== -->
+        <div id="corteModal" class="modal">
+            <div class="modal-content modal-large">
+                <div class="modal-header" style="background: linear-gradient(135deg, #37474f, #455a64);">
+                    <h2><i class="fas fa-chart-bar"></i> Corte de Caja</h2>
+                    <span class="close" onclick="closeCorteModal()"><i class="fas fa-times"></i></span>
+                </div>
+                
+                <div class="corte-body">
+                    <div class="corte-date-selector">
+                        <div class="date-picker">
+                            <label for="corteDate"><i class="fas fa-calendar-alt"></i> Fecha:</label>
+                            <input type="date" id="corteDate" onchange="loadCorteData()">
+                        </div>
+                        <button class="btn btn-primary" onclick="exportCortePDF()">
+                            <i class="fas fa-file-pdf"></i> Exportar PDF
+                        </button>
+                    </div>
+                    
+                    <div class="corte-resumen">
+                        <div class="resumen-card total-ventas">
+                            <div class="resumen-icon">
+                                <i class="fas fa-shopping-cart"></i>
+                            </div>
+                            <div class="resumen-info">
+                                <span class="resumen-label">Total Ventas</span>
+                                <span class="resumen-value" id="corteTotalVentas">$0.00</span>
+                            </div>
+                        </div>
+                        
+                        <div class="resumen-card total-efectivo">
+                            <div class="resumen-icon">
+                                <i class="fas fa-money-bill-wave"></i>
+                            </div>
+                            <div class="resumen-info">
+                                <span class="resumen-label">Efectivo</span>
+                                <span class="resumen-value" id="corteTotalEfectivo">$0.00</span>
+                            </div>
+                        </div>
+                        
+                        <div class="resumen-card total-tarjeta">
+                            <div class="resumen-icon">
+                                <i class="fas fa-credit-card"></i>
+                            </div>
+                            <div class="resumen-info">
+                                <span class="resumen-label">Tarjeta</span>
+                                <span class="resumen-value" id="corteTotalTarjeta">$0.00</span>
+                            </div>
+                        </div>
+                        
+                        <div class="resumen-card total-devoluciones">
+                            <div class="resumen-icon">
+                                <i class="fas fa-undo"></i>
+                            </div>
+                            <div class="resumen-info">
+                                <span class="resumen-label">Devoluciones</span>
+                                <span class="resumen-value" id="corteTotalDevoluciones">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="corte-estadisticas">
+                        <div class="estadistica-item">
+                            <span class="estadistica-label">Número de ventas:</span>
+                            <span class="estadistica-value" id="corteNumVentas">0</span>
+                        </div>
+                        <div class="estadistica-item">
+                            <span class="estadistica-label">Ticket promedio:</span>
+                            <span class="estadistica-value" id="corteTicketPromedio">$0.00</span>
+                        </div>
+                        <div class="estadistica-item">
+                            <span class="estadistica-label">Productos vendidos:</span>
+                            <span class="estadistica-value" id="corteProductosVendidos">0</span>
+                        </div>
+                    </div>
+                    
+                    <div class="corte-tabs">
+                        <button class="corte-tab-btn active" onclick="switchCorteTab('ventas')">
+                            <i class="fas fa-receipt"></i> Ventas del día
+                        </button>
+                        <button class="corte-tab-btn" onclick="switchCorteTab('devoluciones')">
+                            <i class="fas fa-undo"></i> Devoluciones del día
+                        </button>
+                    </div>
+                    
+                    <div id="corteVentasPanel" class="corte-panel active">
+                        <div class="corte-search">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="corteVentasSearch" placeholder="Buscar en ventas..." oninput="filterCorteVentas()">
+                        </div>
+                        <div class="corte-ventas-lista" id="corteVentasLista"></div>
+                    </div>
+                    
+                    <div id="corteDevolucionesPanel" class="corte-panel">
+                        <div class="corte-search">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="corteDevolucionesSearch" placeholder="Buscar en devoluciones..." oninput="filterCorteDevoluciones()">
+                        </div>
+                        <div class="corte-devoluciones-lista" id="corteDevolucionesLista"></div>
+                    </div>
+                    
+                    <div class="corte-historial">
+                        <h3><i class="fas fa-history"></i> Cortes anteriores</h3>
+                        <div class="historial-cortes-lista" id="historialCortesLista"></div>
                     </div>
                 </div>
             </div>

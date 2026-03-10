@@ -5598,3 +5598,378 @@ tbody tr.highlight {
 .total-amount {
     transition: all 0.3s ease;
 }
+
+/* ============================================================ */
+/* PANTALLA DE LOGIN INICIAL */
+/* ============================================================ */
+
+.login-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #00695c, #00897b);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.login-container {
+    width: 100%;
+    max-width: 400px;
+    padding: 20px;
+}
+
+.login-box {
+    background: white;
+    border-radius: 20px;
+    padding: 40px 30px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    text-align: center;
+    animation: slideUp 0.5s ease;
+}
+
+.login-logo {
+    width: 100px;
+    height: 100px;
+    background: linear-gradient(135deg, #00695c, #00897b);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 48px;
+    color: white;
+    box-shadow: 0 10px 20px rgba(0,105,92,0.3);
+}
+
+.login-box h1 {
+    color: #00695c;
+    font-size: 28px;
+    margin-bottom: 5px;
+}
+
+.login-subtitle {
+    color: #757575;
+    font-size: 14px;
+    margin-bottom: 30px;
+}
+
+.login-form {
+    text-align: left;
+}
+
+.input-group {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.input-group i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #00897b;
+    font-size: 18px;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 15px 15px 15px 45px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 16px;
+    transition: all 0.3s;
+}
+
+.input-group input:focus {
+    border-color: #00897b;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0,137,123,0.1);
+}
+
+.login-error-message {
+    background: #ffebee;
+    border: 2px solid #ef9a9a;
+    border-radius: 8px;
+    padding: 12px 15px;
+    margin-bottom: 20px;
+    color: #c62828;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.login-error-message i {
+    font-size: 18px;
+}
+
+.login-button {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, #00695c, #00897b);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.3s;
+}
+
+.login-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0,105,92,0.3);
+}
+
+.login-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.login-footer {
+    margin-top: 30px;
+    color: #9e9e9e;
+    font-size: 12px;
+}
+
+/* Header con usuario */
+.header-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-info {
+    background: rgba(255,255,255,0.15);
+    padding: 8px 15px;
+    border-radius: 30px;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.user-info i {
+    font-size: 18px;
+}
+
+.btn-logout-header {
+    background: rgba(255,255,255,0.15) !important;
+    color: white !important;
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 8px 15px !important;
+    border-radius: 30px !important;
+}
+
+.btn-logout-header:hover {
+    background: rgba(255,255,255,0.25) !important;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+/* ============================================================ */
+/* PANTALLA DE LOGIN INICIAL */
+/* ============================================================ */
+
+.login-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #00695c, #00897b);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.login-container {
+    width: 100%;
+    max-width: 400px;
+    padding: 20px;
+}
+
+.login-box {
+    background: white;
+    border-radius: 20px;
+    padding: 40px 30px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    text-align: center;
+    animation: slideUp 0.5s ease;
+}
+
+.login-logo {
+    width: 100px;
+    height: 100px;
+    background: linear-gradient(135deg, #00695c, #00897b);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 48px;
+    color: white;
+    box-shadow: 0 10px 20px rgba(0,105,92,0.3);
+}
+
+.login-box h1 {
+    color: #00695c;
+    font-size: 28px;
+    margin-bottom: 5px;
+}
+
+.login-subtitle {
+    color: #757575;
+    font-size: 14px;
+    margin-bottom: 30px;
+}
+
+.login-form {
+    text-align: left;
+}
+
+.input-group {
+    position: relative;
+    margin-bottom: 20px;
+}
+
+.input-group i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #00897b;
+    font-size: 18px;
+}
+
+.input-group input {
+    width: 100%;
+    padding: 15px 15px 15px 45px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 16px;
+    transition: all 0.3s;
+}
+
+.input-group input:focus {
+    border-color: #00897b;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(0,137,123,0.1);
+}
+
+.login-error-message {
+    background: #ffebee;
+    border: 2px solid #ef9a9a;
+    border-radius: 8px;
+    padding: 12px 15px;
+    margin-bottom: 20px;
+    color: #c62828;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.login-error-message i {
+    font-size: 18px;
+}
+
+.login-button {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, #00695c, #00897b);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    transition: all 0.3s;
+}
+
+.login-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0,105,92,0.3);
+}
+
+.login-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.login-footer {
+    margin-top: 30px;
+    color: #9e9e9e;
+    font-size: 12px;
+}
+
+/* Header con usuario */
+.header-user {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.user-info {
+    background: rgba(255,255,255,0.15);
+    padding: 8px 15px;
+    border-radius: 30px;
+    color: white;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.user-info i {
+    font-size: 18px;
+}
+
+.btn-logout-header {
+    background: rgba(255,255,255,0.15) !important;
+    color: white !important;
+    border: 1px solid rgba(255,255,255,0.2);
+    padding: 8px 15px !important;
+    border-radius: 30px !important;
+}
+
+.btn-logout-header:hover {
+    background: rgba(255,255,255,0.25) !important;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(50px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}

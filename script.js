@@ -24,6 +24,173 @@ let isAdminLoggedIn = false;
 let currentAdminUser = null;
 let inactivityTimer;
 
+// ============================================================
+// VARIABLES DE SESIÓN DEL SISTEMA
+// ============================================================
+let isSystemLoggedIn = false;
+let currentSystemUser = null;
+
+
+// ============================================================
+// FUNCIÓN CHECK SESSION - DEBE ESTAR AL PRINCIPIO
+// ============================================================
+function checkSession() {
+    console.log('🔐 Verificando sesión...');
+    const savedUser = localStorage.getItem('puntoVentaUser');
+    if (savedUser) {
+        try {
+            currentSystemUser = JSON.parse(savedUser);
+            isSystemLoggedIn = true;
+            showMainContent();
+            updateUserDisplay();
+            initializeApp();
+        } catch (e) {
+            showLoginScreen();
+        }
+    } else {
+        showLoginScreen();
+    }
+}
+
+// Mostrar pantalla de login
+function showLoginScreen() {
+    const loginScreen = document.getElementById('loginScreen');
+    const mainContent = document.getElementById('mainContent');
+    if (loginScreen) {
+        loginScreen.style.display = 'flex';
+    }
+    if (mainContent) {
+        mainContent.style.display = 'none';
+    }
+}
+
+// Mostrar contenido principal
+function showMainContent() {
+    const loginScreen = document.getElementById('loginScreen');
+    const mainContent = document.getElementById('mainContent');
+    if (loginScreen) {
+        loginScreen.style.display = 'none';
+    }
+    if (mainContent) {
+        mainContent.style.display = 'block';
+    }
+}
+
+
+// Actualizar display del usuario en el header
+function updateUserDisplay() {
+    const userSpan = document.getElementById('currentUserName');
+    if (userSpan && currentSystemUser) {
+        userSpan.textContent = currentSystemUser.nombre || currentSystemUser.username;
+    }
+}
+
+// Manejar tecla Enter en login
+function handleKeyPress(event) {
+    if (event.key === 'Enter') {
+        attemptLogin();
+    }
+}
+
+// Intentar login en el sistema
+async function attemptLogin() {
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value.trim();
+    
+    if (!username || !password) {
+        showSystemLoginError('Por favor ingresa usuario y contraseña');
+        return;
+    }
+    
+    const loginBtn = document.querySelector('.login-button');
+    const originalText = loginBtn.innerHTML;
+    loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...';
+    loginBtn.disabled = true;
+    
+    try {
+        // Buscar usuario en la tabla de admin_usuarios
+        const { data: usuarios, error } = await supabaseClient
+            .from('admin_usuarios')
+            .select('*')
+            .eq('username', username)
+            .eq('activo', true);
+        
+        if (error) {
+            console.error('Error al consultar usuario:', error);
+            showSystemLoginError('Error al conectar con el servidor');
+            return;
+        }
+        
+        if (!usuarios || usuarios.length === 0) {
+            showSystemLoginError('Usuario no encontrado');
+            return;
+        }
+        
+        const usuario = usuarios[0];
+        
+        // Verificar contraseña
+        if (usuario.password !== password) {
+            showSystemLoginError('Contraseña incorrecta');
+            return;
+        }
+        
+        // Login exitoso
+        isSystemLoggedIn = true;
+        currentSystemUser = usuario;
+        
+        // Guardar en localStorage para mantener sesión
+        localStorage.setItem('puntoVentaUser', JSON.stringify({
+            id: usuario.id,
+            username: usuario.username,
+            nombre: usuario.nombre
+        }));
+        
+        // Mostrar contenido principal
+        showMainContent();
+        updateUserDisplay();
+        
+        // Inicializar la aplicación
+        initializeApp();
+        
+    } catch (error) {
+        console.error('Error inesperado:', error);
+        showSystemLoginError('Error al iniciar sesión');
+    } finally {
+        loginBtn.innerHTML = originalText;
+        loginBtn.disabled = false;
+    }
+}
+
+// Mostrar error en login del sistema
+function showSystemLoginError(message) {
+    const errorDiv = document.getElementById('loginError');
+    errorDiv.querySelector('span').textContent = message;
+    errorDiv.style.display = 'flex';
+    
+    setTimeout(() => {
+        errorDiv.style.display = 'none';
+    }, 3000);
+}
+
+// Cerrar sesión del sistema
+function logoutFromSystem() {
+    if (confirm('¿Cerrar sesión?')) {
+        isSystemLoggedIn = false;
+        currentSystemUser = null;
+        localStorage.removeItem('puntoVentaUser');
+        
+        // Limpiar venta actual
+        productosEnVenta = [];
+        renderSalesTable();
+        
+        // Mostrar pantalla de login
+        showLoginScreen();
+        
+        showNotification('Sesión cerrada', 'info');
+    }
+}
+
+
 
 // ============================================================
 // OBTENER CONTEO REAL DE PRODUCTOS POR CATEGORÍA (CORREGIDO)
@@ -136,86 +303,226 @@ async function loadCategories() {
     categoriesFromDB = data;
     return data;
 }
-
 // ============================================================
-// FUNCIONES DE LOGIN
+// LOGIN PARA PUNTO DE VENTA (USUARIOS DE VENTA)
 // ============================================================
 
-function showLoginModal() {
-    if (isAdminLoggedIn) {
-        const nameSpan = document.getElementById('currentAdminName');
-        if (nameSpan && currentAdminUser) {
-            nameSpan.textContent = currentAdminUser.nombre || currentAdminUser.username;
+// Verificar si hay sesión activa al cargar la página
+function checkSession() {
+    const savedUser = localStorage.getItem('puntoVentaUser');
+    if (savedUser) {
+        try {
+            currentSystemUser = JSON.parse(savedUser);
+            isSystemLoggedIn = true;
+            showMainContent();
+            updateUserDisplay();
+        } catch (e) {
+            showLoginScreen();
         }
-        openAdminModal();
-        return;
+    } else {
+        showLoginScreen();
     }
-    
-    document.getElementById('loginUsername').value = '';
-    document.getElementById('loginPassword').value = '';
-    document.getElementById('loginError').style.display = 'none';
-    
-    document.getElementById('loginModal').style.display = 'block';
+}
+
+// Mostrar pantalla de login
+function showLoginScreen() {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('mainContent').style.display = 'none';
     document.getElementById('loginUsername').focus();
 }
 
-function closeLoginModal() {
-    document.getElementById('loginModal').style.display = 'none';
+// Mostrar contenido principal
+function showMainContent() {
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('mainContent').style.display = 'block';
 }
 
+// Actualizar display del usuario en el header
+function updateUserDisplay() {
+    const userSpan = document.getElementById('currentUserName');
+    if (userSpan && currentSystemUser) {
+        userSpan.textContent = currentSystemUser.nombre || currentSystemUser.username;
+    }
+}
+
+// Manejar tecla Enter en login
 function handleKeyPress(event) {
     if (event.key === 'Enter') {
         attemptLogin();
     }
 }
 
+// Intentar login en el sistema (USUARIOS DE VENTA)
 async function attemptLogin() {
     const username = document.getElementById('loginUsername').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
     
     if (!username || !password) {
-        showLoginError('Por favor ingresa usuario y contraseña');
+        showSystemLoginError('Por favor ingresa usuario y contraseña');
         return;
     }
     
-    const loginBtn = document.querySelector('.login-btn');
+    const loginBtn = document.querySelector('.login-button');
     const originalText = loginBtn.innerHTML;
     loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...';
     loginBtn.disabled = true;
     
     try {
+        // Buscar en TABLA DE USUARIOS DE VENTA
         const { data: usuarios, error } = await supabaseClient
-            .from('admin_usuarios')
+            .from('usuarios_venta')  // 👈 CAMBIADO: antes era admin_usuarios
             .select('*')
             .eq('username', username)
             .eq('activo', true);
         
         if (error) {
             console.error('Error al consultar usuario:', error);
-            showLoginError('Error al conectar con el servidor');
+            showSystemLoginError('Error al conectar con el servidor');
             return;
         }
         
         if (!usuarios || usuarios.length === 0) {
-            showLoginError('Usuario no encontrado');
+            showSystemLoginError('Usuario no encontrado');
+            return;
+        }
+        
+        const usuario = usuarios[0];
+        
+        // Verificar contraseña
+        if (usuario.password !== password) {
+            showSystemLoginError('Contraseña incorrecta');
+            return;
+        }
+        
+        // Login exitoso
+        isSystemLoggedIn = true;
+        currentSystemUser = usuario;
+        
+        // Guardar en localStorage para mantener sesión
+        localStorage.setItem('puntoVentaUser', JSON.stringify({
+            id: usuario.id,
+            username: usuario.username,
+            nombre: usuario.nombre
+        }));
+        
+        // Mostrar contenido principal
+        showMainContent();
+        updateUserDisplay();
+        
+        // Inicializar la aplicación
+        initializeApp();
+        
+    } catch (error) {
+        console.error('Error inesperado:', error);
+        showSystemLoginError('Error al iniciar sesión');
+    } finally {
+        loginBtn.innerHTML = originalText;
+        loginBtn.disabled = false;
+    }
+}
+
+// Mostrar error en login del sistema
+function showSystemLoginError(message) {
+    const errorDiv = document.getElementById('loginError');
+    errorDiv.querySelector('span').textContent = message;
+    errorDiv.style.display = 'flex';
+    
+    setTimeout(() => {
+        errorDiv.style.display = 'none';
+    }, 3000);
+}
+
+// Cerrar sesión del sistema
+function logoutFromSystem() {
+    if (confirm('¿Cerrar sesión?')) {
+        isSystemLoggedIn = false;
+        currentSystemUser = null;
+        localStorage.removeItem('puntoVentaUser');
+        
+        // Limpiar venta actual
+        productosEnVenta = [];
+        renderSalesTable();
+        
+        // Mostrar pantalla de login
+        showLoginScreen();
+        
+        showNotification('Sesión cerrada', 'info');
+    }
+}
+
+// ============================================================
+// LOGIN PARA ADMIN (GERENTES/ADMINISTRADORES)
+// ============================================================
+
+// Mostrar modal de login para admin
+function showLoginModal() {
+    document.getElementById('adminUsername').value = '';
+    document.getElementById('adminPassword').value = '';
+    document.getElementById('adminLoginError').style.display = 'none';
+    document.getElementById('loginModal').style.display = 'block';
+    document.getElementById('adminUsername').focus();
+}
+
+function closeLoginModal() {
+    document.getElementById('loginModal').style.display = 'none';
+}
+
+function handleAdminKeyPress(event) {
+    if (event.key === 'Enter') {
+        attemptAdminLogin();
+    }
+}
+
+// Intentar login como admin (TABLA admin_usuarios)
+async function attemptAdminLogin() {
+    const username = document.getElementById('adminUsername').value.trim();
+    const password = document.getElementById('adminPassword').value.trim();
+    
+    if (!username || !password) {
+        showAdminLoginError('Por favor ingresa usuario y contraseña');
+        return;
+    }
+    
+    const loginBtn = document.querySelector('#loginModal .login-btn');
+    const originalText = loginBtn.innerHTML;
+    loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...';
+    loginBtn.disabled = true;
+    
+    try {
+        // Buscar en TABLA DE ADMINISTRADORES
+        const { data: usuarios, error } = await supabaseClient
+            .from('admin_usuarios')  // 👈 ESTA ES LA TABLA DE ADMIN
+            .select('*')
+            .eq('username', username)
+            .eq('activo', true);
+        
+        if (error) {
+            console.error('Error al consultar admin:', error);
+            showAdminLoginError('Error al conectar con el servidor');
+            return;
+        }
+        
+        if (!usuarios || usuarios.length === 0) {
+            showAdminLoginError('Usuario administrador no encontrado');
             return;
         }
         
         const usuario = usuarios[0];
         
         if (usuario.password !== password) {
-            showLoginError('Contraseña incorrecta');
+            showAdminLoginError('Contraseña incorrecta');
             return;
         }
         
-        isAdminLoggedIn = true;
+        // Guardar admin en sesión
         currentAdminUser = usuario;
+        isAdminLoggedIn = true;
         
         resetInactivityTimer();
         
         closeLoginModal();
         
-        showNotification(`Bienvenido ${usuario.nombre || username}`, 'success');
+        showNotification(`Bienvenido Administrador: ${usuario.nombre || username}`, 'success');
         
         const nameSpan = document.getElementById('currentAdminName');
         if (nameSpan) {
@@ -228,15 +535,15 @@ async function attemptLogin() {
         
     } catch (error) {
         console.error('Error inesperado:', error);
-        showLoginError('Error al iniciar sesión');
+        showAdminLoginError('Error al iniciar sesión');
     } finally {
         loginBtn.innerHTML = originalText;
         loginBtn.disabled = false;
     }
 }
 
-function showLoginError(message) {
-    const errorDiv = document.getElementById('loginError');
+function showAdminLoginError(message) {
+    const errorDiv = document.getElementById('adminLoginError');
     errorDiv.querySelector('span').textContent = message;
     errorDiv.style.display = 'flex';
     
@@ -2727,30 +3034,21 @@ window.addEventListener('click', (e) => {
     if (e.target === document.getElementById('reporteStockModal')) closeReporteStockModal();
 });
 
+
+
 // ============================================================
-// INICIALIZACIÓN
+// INICIALIZACIÓN DE LA APLICACIÓN
 // ============================================================
-window.onload = async function() {
+async function initializeApp() {
     console.log('🚀 Inicializando aplicación...');
-    
-    const elementos = ['total', 'salesBody', 'salesTable', 'emptyState'];
-    elementos.forEach(id => {
-        if (!document.getElementById(id)) {
-            console.error(`❌ Elemento #${id} no encontrado en el DOM`);
-        } else {
-            console.log(`✅ Elemento #${id} encontrado`);
-        }
-    });
     
     updateDateTime();
     await verificarYCrearCategorias();
     await loadCategories();
     
     productosEnVenta = [];
-    
     renderSalesTable();
     updateEmptyState();
-    
     cleanOldReturns();
     
     try {
@@ -2761,4 +3059,12 @@ window.onload = async function() {
     }
     
     console.log('✅ Aplicación inicializada correctamente');
+}
+
+// ============================================================
+// WINDOW.ONLOAD - DEBE ESTAR AL FINAL
+// ============================================================
+window.onload = function() {
+    console.log('🚀 Cargando aplicación...');
+    checkSession();
 };
