@@ -1210,6 +1210,9 @@ async function showProductView(categoryId) {
     }
 }
 
+// ============================================================
+// RENDERIZAR INVENTARIO (MOSTRAR UNIDAD DE MEDIDA)
+// ============================================================
 async function renderInventoryGrid(categoryId, searchQuery = '') {
     const grid = document.getElementById('inventoryGrid');
     
@@ -1239,18 +1242,39 @@ async function renderInventoryGrid(categoryId, searchQuery = '') {
             return;
         }
         
-        grid.innerHTML = productos.map(p => `
+        grid.innerHTML = productos.map(p => {
+            // Icono según unidad de medida
+            let unidadIcono = 'fa-cube';
+            let unidadTexto = p.unidad_medida || 'pieza';
+            
+            // Formatear unidad para mostrar
+            const unidadMostrar = {
+                'pieza': 'pieza',
+                'metro': 'm',
+                'centimetro': 'cm',
+                'kilogramo': 'kg',
+                'gramo': 'g',
+                'litro': 'L',
+                'mililitro': 'ml',
+                'caja': 'caja',
+                'paquete': 'paquete',
+                'rollo': 'rollo'
+            }[unidadTexto] || unidadTexto;
+            
+            return `
             <div class="inventory-card ${p.stock <= 0 ? 'out-of-stock' : ''}">
                 <span class="inventory-card-brand">${p.marca || 'Sin marca'}</span>
                 <span class="inventory-card-name">${p.nombre}</span>
                 <span class="inventory-card-code">Cód: ${p.codigo}</span>
-                <span class="inventory-card-stock">Stock: ${p.stock}</span>
-                <span class="inventory-card-price">$${p.precio.toFixed(2)}</span>
+                <span class="inventory-card-stock">
+                    <i class="fas ${unidadIcono}"></i> Stock: ${p.stock} ${unidadMostrar}
+                </span>
+                <span class="inventory-card-price">$${p.precio.toFixed(2)} / ${unidadMostrar}</span>
                 <button class="inventory-card-add" onclick="addProductToSale(${p.id})" ${p.stock <= 0 ? 'disabled' : ''}>
                     <i class="fas fa-plus"></i> ${p.stock > 0 ? 'Agregar' : 'Sin stock'}
                 </button>
             </div>
-        `).join('');
+        `}).join('');
         
     } catch (error) {
         console.error('Error inesperado:', error);
@@ -1371,7 +1395,7 @@ async function showAdminProductView(categoryId) {
 }
 
 // ============================================================
-// RENDERIZAR PRODUCTOS EN ADMIN (CORREGIDO)
+// RENDERIZAR PRODUCTOS EN ADMIN (CON UNIDAD DE MEDIDA)
 // ============================================================
 async function renderAdminProductGrid(categoryId, searchQuery = '') {
     const grid = document.getElementById('adminProductsGrid');
@@ -1406,10 +1430,21 @@ async function renderAdminProductGrid(categoryId, searchQuery = '') {
         }
         
         grid.innerHTML = productos.map(p => {
-            // ESCAPAR COMILLAS del nombre del producto
+            // ESCAPAR COMILLAS
             const nombreEscapado = p.nombre.replace(/'/g, "\\'").replace(/"/g, '&quot;');
             const utilidad = p.precio - (p.precio_proveedor || 0);
             const porcentajeUtilidad = p.precio_proveedor > 0 ? ((utilidad / p.precio_proveedor) * 100).toFixed(1) : 0;
+            
+            // ✅ ASEGURAR UNIDAD DE MEDIDA POR DEFECTO
+            const unidadActual = p.unidad_medida || 'pieza';
+            
+            // Icono según unidad de medida
+            let unidadIcono = 'fa-cube';
+            if (unidadActual === 'metro' || unidadActual === 'centimetro') unidadIcono = 'fa-ruler';
+            else if (unidadActual === 'kilogramo' || unidadActual === 'gramo') unidadIcono = 'fa-weight-scale';
+            else if (unidadActual === 'litro' || unidadActual === 'mililitro') unidadIcono = 'fa-flask';
+            else if (unidadActual === 'caja') unidadIcono = 'fa-box';
+            else if (unidadActual === 'rollo') unidadIcono = 'fa-roll';
             
             return `
             <div class="admin-product-card ${p.stock <= p.stock_minimo ? 'low-stock' : ''}">
@@ -1417,7 +1452,29 @@ async function renderAdminProductGrid(categoryId, searchQuery = '') {
                     <span class="admin-product-brand">${p.marca || 'Sin marca'}</span>
                     <span class="admin-product-code">Cód: ${p.codigo}</span>
                 </div>
-                <div class="admin-product-name">${p.nombre}</div>
+                
+                <!-- NOMBRE EDITABLE -->
+                <div class="admin-product-name-editable">
+                    <label>Nombre del producto</label>
+                    <input type="text" id="nombre_${p.id}" value="${p.nombre}" class="admin-edit-input nombre-input">
+                </div>
+                
+                <!-- UNIDAD DE MEDIDA EDITABLE -->
+                <div class="admin-product-unidad">
+                    <label><i class="fas ${unidadIcono}"></i> Unidad de medida</label>
+                    <select id="unidad_${p.id}" class="admin-edit-input">
+                        <option value="pieza" ${unidadActual === 'pieza' ? 'selected' : ''}>Pieza (unidad)</option>
+                        <option value="metro" ${unidadActual === 'metro' ? 'selected' : ''}>Metro (m)</option>
+                        <option value="centimetro" ${unidadActual === 'centimetro' ? 'selected' : ''}>Centímetro (cm)</option>
+                        <option value="kilogramo" ${unidadActual === 'kilogramo' ? 'selected' : ''}>Kilogramo (kg)</option>
+                        <option value="gramo" ${unidadActual === 'gramo' ? 'selected' : ''}>Gramo (g)</option>
+                        <option value="litro" ${unidadActual === 'litro' ? 'selected' : ''}>Litro (L)</option>
+                        <option value="mililitro" ${unidadActual === 'mililitro' ? 'selected' : ''}>Mililitro (ml)</option>
+                        <option value="caja" ${unidadActual === 'caja' ? 'selected' : ''}>Caja</option>
+                        <option value="paquete" ${unidadActual === 'paquete' ? 'selected' : ''}>Paquete</option>
+                        <option value="rollo" ${unidadActual === 'rollo' ? 'selected' : ''}>Rollo</option>
+                    </select>
+                </div>
                 
                 <div class="admin-product-details">
                     <div class="admin-product-price">
@@ -1476,13 +1533,16 @@ function filterAdminProducts() {
         renderAdminProductGrid(adminCurrentCategory, query);
     }
 }
-
+// ============================================================
+// MOSTRAR FORMULARIO AGREGAR PRODUCTO (ACTUALIZADO)
+// ============================================================
 async function showAdminAddProductView() {
     document.getElementById('adminCategoryView').style.display = 'none';
     document.getElementById('adminProductView').style.display = 'none';
     document.getElementById('adminAddProductView').style.display = 'block';
     document.getElementById('adminModalTitle').innerHTML = '<i class="fas fa-plus-circle"></i> Agregar Nuevo Producto';
     
+    // Cargar categorías
     const select = document.getElementById('adminProdCategory');
     select.innerHTML = '<option value="">Cargando categorías...</option>';
     
@@ -1506,6 +1566,9 @@ async function showAdminAddProductView() {
             select.appendChild(option);
         });
         
+        // Establecer valor por defecto para unidad de medida
+        document.getElementById('adminProdUnidad').value = 'pieza';
+        
         document.getElementById('adminAddProductForm').reset();
         document.getElementById('adminMessage').style.display = 'none';
         
@@ -1516,13 +1579,25 @@ async function showAdminAddProductView() {
 }
 
 // ============================================================
-// GUARDAR CAMBIOS (MODIFICADO PARA ACTUALIZAR CATEGORÍAS)
+// GUARDAR CAMBIOS (CON UNIDAD DE MEDIDA)
 // ============================================================
 async function saveProductChanges(productId) {
+    const nombre = document.getElementById(`nombre_${productId}`)?.value.trim();
+    const unidad = document.getElementById(`unidad_${productId}`)?.value;
     const precio = parseFloat(document.getElementById(`price_${productId}`).value);
     const precioProveedor = parseFloat(document.getElementById(`price_prov_${productId}`).value);
     const stock = parseInt(document.getElementById(`stock_${productId}`).value);
     const stockMinimo = parseInt(document.getElementById(`minstock_${productId}`).value);
+    
+    if (!nombre) {
+        alert('El nombre del producto no puede estar vacío');
+        return;
+    }
+    
+    if (!unidad) {
+        alert('Debes seleccionar una unidad de medida');
+        return;
+    }
     
     if (isNaN(precio) || precio < 0) {
         alert('El precio público debe ser un número válido');
@@ -1543,6 +1618,8 @@ async function saveProductChanges(productId) {
         const { error } = await supabaseClient
             .from('productos')
             .update({
+                nombre: nombre,
+                unidad_medida: unidad,
                 precio: precio,
                 precio_proveedor: precioProveedor,
                 stock: stock,
@@ -1554,7 +1631,7 @@ async function saveProductChanges(productId) {
         
         alert('✅ Producto actualizado correctamente');
         
-        // ACTUALIZAR CONTADORES (por si cambió el stock)
+        // Actualizar contadores
         if (document.getElementById('adminCategoryView').style.display === 'block') {
             await renderAdminCategoryGrid();
         }
@@ -1613,7 +1690,7 @@ async function deleteProduct(productId, productName) {
 }
 
 // ============================================================
-// AGREGAR PRODUCTO (MODIFICADO PARA ACTUALIZAR CATEGORÍAS)
+// AGREGAR PRODUCTO (CON UNIDAD DE MEDIDA)
 // ============================================================
 document.getElementById('adminAddProductForm')?.addEventListener('submit', async function(e) {
     e.preventDefault();
@@ -1622,12 +1699,13 @@ document.getElementById('adminAddProductForm')?.addEventListener('submit', async
     const nombre = document.getElementById('adminProdName').value.trim();
     const marca = document.getElementById('adminProdBrand').value.trim() || null;
     const categoria = parseInt(document.getElementById('adminProdCategory').value);
+    const unidadMedida = document.getElementById('adminProdUnidad').value; // NUEVO
     const precio = parseFloat(document.getElementById('adminProdPrice').value);
     const precioProveedor = parseFloat(document.getElementById('adminProdPriceProveedor').value);
     const stock = parseInt(document.getElementById('adminProdStock').value);
     const minimo = parseInt(document.getElementById('adminProdMinStock').value);
     
-    if (!codigo || !nombre || isNaN(categoria) || isNaN(precio) || precio <= 0 || isNaN(precioProveedor) || precioProveedor < 0 || isNaN(stock) || stock < 0) {
+    if (!codigo || !nombre || isNaN(categoria) || !unidadMedida || isNaN(precio) || precio <= 0 || isNaN(precioProveedor) || precioProveedor < 0 || isNaN(stock) || stock < 0) {
         showAdminMessage('Faltan datos o hay valores inválidos', 'error');
         return;
     }
@@ -1637,6 +1715,7 @@ document.getElementById('adminAddProductForm')?.addEventListener('submit', async
         nombre,
         marca,
         categoria_id: categoria,
+        unidad_medida: unidadMedida, // NUEVO
         precio: precio,
         precio_proveedor: precioProveedor,
         stock: stock,
@@ -1655,12 +1734,12 @@ document.getElementById('adminAddProductForm')?.addEventListener('submit', async
         } else {
             showAdminMessage('✅ Producto agregado correctamente', 'success');
             
-            // ACTUALIZAR CONTADORES
+            // Actualizar contadores
             if (document.getElementById('adminCategoryView').style.display === 'block') {
-                await renderAdminCategoryGrid(); // Actualizar categorías en admin
+                await renderAdminCategoryGrid();
             }
             if (document.getElementById('categoryView').style.display === 'block') {
-                await renderCategoryGrid(); // Actualizar categorías en inventario
+                await renderCategoryGrid();
             }
             
             setTimeout(() => {
@@ -3068,3 +3147,5 @@ window.onload = function() {
     console.log('🚀 Cargando aplicación...');
     checkSession();
 };
+
+

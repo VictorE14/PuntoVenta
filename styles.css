@@ -5973,3 +5973,155 @@ tbody tr.highlight {
         opacity: 1;
     }
 }
+
+/* ============================================================ */
+/* ESTILOS PARA UNIDAD DE MEDIDA Y NOMBRE EDITABLE */
+/* ============================================================ */
+
+.admin-product-name-editable {
+    margin-bottom: 12px;
+}
+
+.admin-product-name-editable label {
+    display: block;
+    font-size: 11px;
+    color: #757575;
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.nombre-input {
+    width: 100%;
+    padding: 8px 10px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #212121;
+}
+
+.nombre-input:focus {
+    border-color: #00897b;
+    outline: none;
+}
+
+.admin-product-unidad {
+    margin-bottom: 12px;
+}
+
+.admin-product-unidad label {
+    display: block;
+    font-size: 11px;
+    color: #757575;
+    margin-bottom: 4px;
+    font-weight: 600;
+}
+
+.admin-product-unidad select {
+    width: 100%;
+    padding: 8px 10px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 13px;
+    background: white;
+    cursor: pointer;
+}
+
+.admin-product-unidad select:focus {
+    border-color: #00897b;
+    outline: none;
+}
+
+/* Estilo para el selector en formulario de agregar */
+#adminProdUnidad {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    background: white;
+}
+
+#adminProdUnidad:focus {
+    border-color: #00897b;
+    outline: none;
+}
+
+/* Inventario - mostrar unidad */
+.inventory-card-stock i {
+    margin-right: 4px;
+    color: #00897b;
+}
+
+/* ============================================================ */
+/* ESTILOS PARA EL FORMULARIO DE AGREGAR PRODUCTO */
+/* ============================================================ */
+
+.form-container {
+    padding: 20px;
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 6px;
+    font-weight: 600;
+    color: #444;
+    font-size: 14px;
+}
+
+.form-group label i {
+    color: #00897b;
+    margin-right: 5px;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    border-color: #00897b;
+    outline: none;
+}
+
+.form-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 16px;
+}
+
+.form-group.half {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.btn-block {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    margin-top: 10px;
+}
+
+/* Responsive para móviles */
+@media screen and (max-width: 767px) {
+    .form-row {
+        flex-direction: column;
+        gap: 16px;
+    }
+    
+    .form-group.half {
+        width: 100%;
+    }
+}

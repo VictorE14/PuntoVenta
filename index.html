@@ -376,65 +376,89 @@
                     <div class="admin-product-grid" id="adminProductsGrid"></div>
                 </div>
                 
-                <div id="adminAddProductView" style="display:none;">
-                    <div class="admin-view-header">
-                        <button class="btn btn-secondary btn-back" onclick="showAdminProductView(adminCurrentCategory)">
-                            <i class="fas fa-arrow-left"></i> Volver
-                        </button>
-                        <span class="product-view-title">Agregar Nuevo Producto</span>
-                    </div>
-                    <div class="form-container">
-                        <form id="adminAddProductForm">
-                            <div class="form-row">
-                                <div class="form-group half">
-                                    <label for="adminProdCode">Código (único) *</label>
-                                    <input type="text" id="adminProdCode" required placeholder="Ej: 016">
-                                </div>
-                                <div class="form-group half">
-                                    <label for="adminProdCategory">Categoría *</label>
-                                    <select id="adminProdCategory" required></select>
-                                </div>
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="adminProdName">Nombre del producto *</label>
-                                <input type="text" id="adminProdName" required placeholder="Ej: Sierra circular">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label for="adminProdBrand">Marca</label>
-                                <input type="text" id="adminProdBrand" placeholder="Ej: Truper">
-                            </div>
-                            
-                            <div class="form-row">
-                                <div class="form-group half">
-                                    <label for="adminProdPrice">Precio Público (MXN) *</label>
-                                    <input type="number" id="adminProdPrice" min="0" step="0.01" required placeholder="0.00">
-                                </div>
-                                <div class="form-group half">
-                                    <label for="adminProdPriceProveedor">Precio Proveedor (MXN) *</label>
-                                    <input type="number" id="adminProdPriceProveedor" min="0" step="0.01" required placeholder="0.00" value="0">
-                                </div>
-                            </div>
-                            
-                            <div class="form-row">
-                                <div class="form-group half">
-                                    <label for="adminProdStock">Stock Inicial *</label>
-                                    <input type="number" id="adminProdStock" min="0" required value="0">
-                                </div>
-                                <div class="form-group half">
-                                    <label for="adminProdMinStock">Stock Mínimo *</label>
-                                    <input type="number" id="adminProdMinStock" min="1" required value="1">
-                                </div>
-                            </div>
-                            
-                            <button type="submit" class="btn btn-success btn-block">
-                                <i class="fas fa-plus"></i> Agregar Producto
-                            </button>
-                        </form>
-                        <div id="adminMessage" class="admin-message"></div>
-                    </div>
+              <!-- VISTA PARA AGREGAR NUEVO PRODUCTO (CORREGIDA) -->
+<div id="adminAddProductView" style="display:none;">
+    <div class="admin-view-header">
+        <button class="btn btn-secondary btn-back" onclick="showAdminProductView(adminCurrentCategory)">
+            <i class="fas fa-arrow-left"></i> Volver
+        </button>
+        <span class="product-view-title">Agregar Nuevo Producto</span>
+    </div>
+    <div class="form-container">
+        <form id="adminAddProductForm">
+            <!-- Fila 1: Código y Categoría -->
+            <div class="form-row">
+                <div class="form-group half">
+                    <label for="adminProdCode">Código (único) *</label>
+                    <input type="text" id="adminProdCode" required placeholder="Ej: 016">
                 </div>
+                <div class="form-group half">
+                    <label for="adminProdCategory">Categoría *</label>
+                    <select id="adminProdCategory" required></select>
+                </div>
+            </div>
+            
+            <!-- Fila 2: Nombre del producto -->
+            <div class="form-group">
+                <label for="adminProdName">Nombre del producto *</label>
+                <input type="text" id="adminProdName" required placeholder="Ej: Sierra circular">
+            </div>
+            
+            <!-- Fila 3: Marca -->
+            <div class="form-group">
+                <label for="adminProdBrand">Marca</label>
+                <input type="text" id="adminProdBrand" placeholder="Ej: Truper">
+            </div>
+            
+            <!-- Fila 4: Unidad de Medida (NUEVA) -->
+            <div class="form-group">
+                <label for="adminProdUnidad"><i class="fas fa-ruler"></i> Unidad de Medida *</label>
+                <select id="adminProdUnidad" required>
+                    <option value="pieza">Pieza (unidad)</option>
+                    <option value="metro">Metro (m)</option>
+                    <option value="centimetro">Centímetro (cm)</option>
+                    <option value="kilogramo">Kilogramo (kg)</option>
+                    <option value="gramo">Gramo (g)</option>
+                    <option value="litro">Litro (L)</option>
+                    <option value="mililitro">Mililitro (ml)</option>
+                    <option value="caja">Caja</option>
+                    <option value="paquete">Paquete</option>
+                    <option value="rollo">Rollo</option>
+                </select>
+            </div>
+            
+            <!-- Fila 5: Precios (dos columnas) -->
+            <div class="form-row">
+                <div class="form-group half">
+                    <label for="adminProdPrice">Precio Público (MXN) *</label>
+                    <input type="number" id="adminProdPrice" min="0" step="0.01" required placeholder="0.00">
+                </div>
+                <div class="form-group half">
+                    <label for="adminProdPriceProveedor">Precio Proveedor (MXN) *</label>
+                    <input type="number" id="adminProdPriceProveedor" min="0" step="0.01" required placeholder="0.00" value="0">
+                </div>
+            </div>
+            
+            <!-- Fila 6: Stock y Stock Mínimo -->
+            <div class="form-row">
+                <div class="form-group half">
+                    <label for="adminProdStock">Stock Inicial *</label>
+                    <input type="number" id="adminProdStock" min="0" required value="0">
+                </div>
+                <div class="form-group half">
+                    <label for="adminProdMinStock">Stock Mínimo *</label>
+                    <input type="number" id="adminProdMinStock" min="1" required value="1">
+                </div>
+            </div>
+            
+            <!-- Botón de enviar -->
+            <button type="submit" class="btn btn-success btn-block">
+                <i class="fas fa-plus"></i> Agregar Producto
+            </button>
+        </form>
+        <div id="adminMessage" class="admin-message"></div>
+    </div>
+</div>
             </div>
         </div>
 
